@@ -1,0 +1,47 @@
+{
+  "notifications": {
+    "enabled": true,
+    "types": {
+      "meeting_start": true,
+      "meeting_end": true,
+      "user_join": false,
+      "recording_ready": true
+    },
+    "templates": {
+      "meeting_start": "A new {{type}} has started: **{{title}}**",
+      "meeting_end": "The {{type}} **{{title}}** has ended",
+      "user_join": "{{username}} has joined the {{type}} **{{title}}**",
+      "recording_ready": "Recording for **{{title}}** is now available",
+      "meeting_share": "@here {{username}} is inviting you to join a {{type}}: **{{title}}**"
+    },
+    "channels": {
+      "default": "general",
+      "recording_ready": "recordings"
+    }
+  },
+  "commands": {
+    "enabled": true,
+    "prefix": "",
+    "permissions": {
+      "kaltura-start": ["@everyone"],
+      "kaltura-join": ["@everyone"],
+      "kaltura-list": ["@everyone"],
+      "kaltura-end": ["@everyone"],
+      "kaltura-config-view": ["admin"],
+      "kaltura-config-update": ["admin"],
+      "kaltura-config-reset": ["admin"]
+    }
+  },
+  "roles": {
+    "mapping": {
+      "admin": "admin",
+      "moderator": "moderator",
+      "default": "viewer"
+    }
+  },
+  "features": {
+    "embedding": true,
+    "recording": true,
+    "user_sync": true
+  }
+}

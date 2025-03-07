@@ -1,0 +1,85 @@
+# Kaltura-Discord Integration Project Rules
+
+## Project-Specific Insights
+
+1. **Terminology Consistency**
+   - Use "Kaltura session" or "Kaltura meeting" (not "call" or "conference")
+   - Refer to "Discord server" (not "guild" even though API uses this term)
+   - Use "embedding" when referring to the in-Discord experience
+
+2. **Architecture Principles**
+   - Maintain clear separation between Discord and Kaltura integration layers
+   - Design for stateless operation to enable horizontal scaling
+   - Implement graceful degradation for all features
+
+3. **Code Organization**
+   - Discord Bot code in `/discord` directory
+   - API Gateway and services in `/services` directory
+   - Shared utilities in `/common` directory
+   - Infrastructure as Code in `/infrastructure` directory
+
+4. **Security Practices**
+   - No hardcoded secrets in any code
+   - All API keys and tokens managed via environment variables or secret store
+   - Input validation on all user-provided data
+   - Principle of least privilege for all service accounts
+
+5. **Development Workflow**
+   - Feature branches named as `feature/short-description`
+   - Pull requests require at least one reviewer
+   - All services must have unit tests
+   - Integration tests for critical paths
+
+6. **Documentation Standards**
+   - API endpoints documented with OpenAPI/Swagger
+   - README.md in each service directory
+   - Architecture decisions recorded in `/docs/adr` directory
+   - User-facing documentation in `/docs/user` directory
+
+## Learning Journal
+
+### Discord API Insights
+- Discord's API has strict rate limits that vary by endpoint
+- Bot permissions must be carefully scoped to minimum required
+- Slash commands require global registration or per-server registration
+- Activities API is relatively new and has specific requirements
+
+### Kaltura API Insights
+- Kaltura Session (KS) tokens are the primary authentication mechanism
+- Different privileges can be encoded in the KS
+- Virtual Event API provides the most relevant endpoints for our use case
+- User synchronization can be complex due to Kaltura's account model
+
+### Integration Challenges
+- Mapping Discord's role system to Kaltura's permissions
+- Handling session expiration and renewal
+- Managing the user experience when services are unavailable
+- Balancing security with ease of use
+
+### User Experience Considerations
+- Minimize the number of steps to join a meeting
+- Provide clear feedback when operations succeed or fail
+- Consider mobile Discord users in the experience design
+- Ensure accessibility for all user interactions
+
+## Decision Log
+
+1. **Node.js for Services**
+   - Decision: Use Node.js for all microservices
+   - Rationale: Excellent Discord.js support, official Kaltura SDK, team expertise
+   - Date: Initial architecture planning
+
+2. **Microservices Architecture**
+   - Decision: Split functionality into discrete services
+   - Rationale: Independent scaling, deployment, and technology flexibility
+   - Date: Initial architecture planning
+
+3. **Link-First Approach**
+   - Decision: Implement secure link generation before attempting embedded experience
+   - Rationale: Lower technical risk, ensures baseline functionality
+   - Date: Initial architecture planning
+
+4. **Kubernetes for Deployment**
+   - Decision: Use Kubernetes for container orchestration
+   - Rationale: Scalability, resilience, and industry standard practices
+   - Date: Initial architecture planning
