@@ -6,9 +6,16 @@ import { handleInteraction } from './interactions';
 // Create a new Discord client
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
+    // Standard intents - these are required for basic functionality
+    GatewayIntentBits.Guilds,       // Required for basic guild information
+    GatewayIntentBits.GuildMessages, // Required for command handling
+    
+    // Privileged intents - only enable these if you need the specific functionality
+    // These require explicit approval in the Discord Developer Portal
+    
+    // GatewayIntentBits.MessageContent, // Only needed if bot needs to read message content
+    // GatewayIntentBits.GuildMembers,   // Only needed if bot needs to track member join/leave events
+    // GatewayIntentBits.GuildPresences, // Only needed if bot needs to track user presence updates
   ],
 });
 
@@ -47,7 +54,12 @@ export async function startBot(): Promise<void> {
     
     return Promise.resolve();
   } catch (error) {
-    logger.error('Failed to start Discord bot', { error });
+    // Log the full error details for better debugging
+    logger.error('Failed to start Discord bot', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined
+    });
     return Promise.reject(error);
   }
 }

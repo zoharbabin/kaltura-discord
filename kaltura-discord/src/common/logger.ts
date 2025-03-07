@@ -1,11 +1,31 @@
 import winston from 'winston';
 
 /**
+ * Custom format to properly serialize error objects
+ */
+const errorSerializer = winston.format((info) => {
+  if (info.error instanceof Error) {
+    info.error = {
+      errorMessage: info.error.message,
+      stack: info.error.stack,
+      ...Object.getOwnPropertyNames(info.error).reduce((obj, prop) => {
+        if (prop !== 'message' && prop !== 'stack') {
+          obj[prop] = (info.error as any)[prop];
+        }
+        return obj;
+      }, {} as Record<string, any>)
+    };
+  }
+  return info;
+});
+
+/**
  * Configure the logger with appropriate log levels and formats
  */
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
+    errorSerializer(),
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
     winston.format.json()
@@ -15,6 +35,7 @@ export const logger = winston.createLogger({
     // Write all logs to console
     new winston.transports.Console({
       format: winston.format.combine(
+        errorSerializer(),
         winston.format.colorize(),
         winston.format.printf(({ timestamp, level, message, ...meta }) => {
           return `${timestamp} [${level}]: ${message} ${

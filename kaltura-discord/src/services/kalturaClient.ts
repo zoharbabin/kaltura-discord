@@ -212,10 +212,19 @@ export class KalturaClient {
       });
       
       // Transform the response to our Meeting interface
+      // Check if response.data.objects exists before mapping
+      if (!response.data || !response.data.objects) {
+        return []; // Return empty array if no meetings found
+      }
       return response.data.objects.map((meeting: any) => this.transformKalturaMeetingToMeeting(meeting));
     } catch (error) {
-      logger.error('Failed to list meetings', { error, ownerId });
-      throw new Error('Failed to list meetings');
+      // Create a more detailed error message
+      const errorMessage = error instanceof Error
+        ? `Failed to list meetings: ${error.message}`
+        : 'Failed to list meetings: Unknown error';
+      
+      logger.error(errorMessage, { error, ownerId });
+      throw new Error(errorMessage);
     }
   }
 

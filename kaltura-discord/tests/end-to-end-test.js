@@ -47,12 +47,11 @@ class MockDiscordClient extends EventEmitter {
 }
 
 class MockInteraction extends EventEmitter {
-  constructor(commandName, options = {}) {
+  constructor(commandName, optionsData = {}) {
     super();
     this.commandName = commandName;
-    this.options = new Map();
-    this.user = { 
-      id: '123456789', 
+    this.user = {
+      id: '123456789',
       username: 'TestUser',
       discriminator: '1234',
       tag: 'TestUser#1234'
@@ -70,10 +69,24 @@ class MockInteraction extends EventEmitter {
     this.replied = false;
     this.deferred = false;
     
+    // Store options data in a private property
+    this._optionsData = new Map();
+    
     // Set up options
-    for (const [key, value] of Object.entries(options)) {
-      this.options.set(key, value);
+    for (const [key, value] of Object.entries(optionsData)) {
+      this._optionsData.set(key, value);
     }
+    
+    // Create options object with getter methods
+    this.options = {
+      getString: (name, required = false) => {
+        return this._optionsData.get(name) || (required ? 'default_value' : null);
+      },
+      getBoolean: (name, required = false) => {
+        const value = this._optionsData.get(name);
+        return value !== undefined ? value : (required ? true : null);
+      }
+    };
   }
   
   deferReply() {
@@ -92,16 +105,6 @@ class MockInteraction extends EventEmitter {
     this.response = response;
     return Promise.resolve();
   }
-  
-  // Mock option getters
-  options = {
-    getString: (name, required = false) => {
-      return this.options.get(name) || (required ? 'default_value' : null);
-    },
-    getBoolean: (name, required = false) => {
-      return this.options.get(name) !== undefined ? this.options.get(name) : (required ? true : null);
-    }
-  };
   
   isChatInputCommand() {
     return true;

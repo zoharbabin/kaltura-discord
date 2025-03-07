@@ -92,14 +92,20 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
     // Create embed for the response
     const embed = new EmbedBuilder()
       .setColor('#00B171') // Kaltura green
-      .setTitle(`${capitalizeFirstLetter(meeting.type)} Created: ${meeting.title}`)
-      .setDescription(meeting.description || 'No description provided')
-      .addFields(
-        { name: 'Meeting ID', value: meeting.id, inline: true },
-        { name: 'Created by', value: interaction.user.username, inline: true },
-        { name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true }
-      )
-      .setTimestamp()
+      .setTitle(`${capitalizeFirstLetter(meeting.type || 'meeting')} Created: ${meeting.title || 'Untitled'}`)
+      .setDescription(meeting.description || 'No description provided');
+      
+    // Add fields with validation to prevent undefined values
+    const fields = [];
+    if (meeting.id) fields.push({ name: 'Meeting ID', value: meeting.id, inline: true });
+    if (interaction.user?.username) fields.push({ name: 'Created by', value: interaction.user.username, inline: true });
+    if (meeting.type) fields.push({ name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true });
+    
+    if (fields.length > 0) {
+      embed.addFields(...fields);
+    }
+    
+    embed.setTimestamp()
       .setFooter({ text: 'Kaltura Meeting' });
     
     // Create buttons for the response
@@ -133,7 +139,12 @@ export async function handleStartCommand(interaction: ChatInputCommandInteractio
       meetingId: meeting.id 
     });
   } catch (error) {
-    logger.error('Error handling kaltura-start command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-start command: ${error.message}`
+      : 'Error handling kaltura-start command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -225,13 +236,19 @@ export async function handleJoinCommand(interaction: ChatInputCommandInteraction
     // Create embed for the response
     const embed = new EmbedBuilder()
       .setColor('#00B171') // Kaltura green
-      .setTitle(`Join ${capitalizeFirstLetter(meeting.type)}: ${meeting.title}`)
-      .setDescription(meeting.description || 'No description provided')
-      .addFields(
-        { name: 'Meeting ID', value: meeting.id, inline: true },
-        { name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true }
-      )
-      .setTimestamp()
+      .setTitle(`Join ${capitalizeFirstLetter(meeting.type || 'meeting')}: ${meeting.title || 'Untitled'}`)
+      .setDescription(meeting.description || 'No description provided');
+      
+    // Add fields with validation to prevent undefined values
+    const fields = [];
+    if (meeting.id) fields.push({ name: 'Meeting ID', value: meeting.id, inline: true });
+    if (meeting.type) fields.push({ name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true });
+    
+    if (fields.length > 0) {
+      embed.addFields(...fields);
+    }
+    
+    embed.setTimestamp()
       .setFooter({ text: 'Kaltura Meeting' });
     
     // Create button for the join URL
@@ -255,7 +272,12 @@ export async function handleJoinCommand(interaction: ChatInputCommandInteraction
       meetingId: meeting.id 
     });
   } catch (error) {
-    logger.error('Error handling kaltura-join command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-join command: ${error.message}`
+      : 'Error handling kaltura-join command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -390,7 +412,12 @@ export async function handleListCommand(interaction: ChatInputCommandInteraction
       count: meetings.length 
     });
   } catch (error) {
-    logger.error('Error handling kaltura-list command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-list command: ${error.message}`
+      : 'Error handling kaltura-list command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -479,14 +506,20 @@ export async function handleEndCommand(interaction: ChatInputCommandInteraction)
     // Create embed for the response
     const embed = new EmbedBuilder()
       .setColor('#00B171') // Kaltura green
-      .setTitle(`${capitalizeFirstLetter(meeting.type)} Ended: ${meeting.title}`)
-      .setDescription('This meeting has been ended successfully.')
-      .addFields(
-        { name: 'Meeting ID', value: meeting.id, inline: true },
-        { name: 'Ended by', value: interaction.user.username, inline: true },
-        { name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true }
-      )
-      .setTimestamp()
+      .setTitle(`${capitalizeFirstLetter(meeting.type || 'meeting')} Ended: ${meeting.title || 'Untitled'}`)
+      .setDescription('This meeting has been ended successfully.');
+      
+    // Add fields with validation to prevent undefined values
+    const fields = [];
+    if (meeting.id) fields.push({ name: 'Meeting ID', value: meeting.id, inline: true });
+    if (interaction.user?.username) fields.push({ name: 'Ended by', value: interaction.user.username, inline: true });
+    if (meeting.type) fields.push({ name: 'Type', value: capitalizeFirstLetter(meeting.type), inline: true });
+    
+    if (fields.length > 0) {
+      embed.addFields(...fields);
+    }
+    
+    embed.setTimestamp()
       .setFooter({ text: 'Kaltura Meeting' });
     
     // Send the response to the user
@@ -499,7 +532,12 @@ export async function handleEndCommand(interaction: ChatInputCommandInteraction)
       meetingId: meeting.id 
     });
   } catch (error) {
-    logger.error('Error handling kaltura-end command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-end command: ${error.message}`
+      : 'Error handling kaltura-end command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -671,7 +709,12 @@ export async function handleConfigViewCommand(interaction: ChatInputCommandInter
       section
     });
   } catch (error) {
-    logger.error('Error handling kaltura-config-view command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-config-view command: ${error.message}`
+      : 'Error handling kaltura-config-view command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -776,7 +819,12 @@ export async function handleConfigUpdateCommand(interaction: ChatInputCommandInt
       value
     });
   } catch (error) {
-    logger.error('Error handling kaltura-config-update command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-config-update command: ${error.message}`
+      : 'Error handling kaltura-config-update command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({
@@ -854,7 +902,12 @@ export async function handleConfigResetCommand(interaction: ChatInputCommandInte
       section
     });
   } catch (error) {
-    logger.error('Error handling kaltura-config-reset command', { error });
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-config-reset command: ${error.message}`
+      : 'Error handling kaltura-config-reset command: Unknown error';
+    
+    logger.error(errorMessage, { error });
     
     if (interaction.deferred) {
       await interaction.editReply({

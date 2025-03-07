@@ -8,6 +8,7 @@ BOLD="\033[1m"
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RED="\033[0;31m"
+BLUE="\033[0;34m"
 RESET="\033[0m"
 
 echo -e "${BOLD}Kaltura-Discord Integration Setup and Test${RESET}\n"
@@ -80,16 +81,23 @@ fi
 
 # Check environment variables
 echo -e "\n${BOLD}Checking environment variables...${RESET}"
-source .env
 
+# Use grep and cut to safely extract environment variables instead of sourcing the file
 ENV_ISSUES=0
 
 check_env_var() {
-  if [ -z "${!1}" ] || [ "${!1}" == "your_$2" ]; then
-    echo -e "${YELLOW}Warning: $1 is not set or has default value.${RESET}"
+  local var_name=$1
+  local default_value=$2
+  local var_value
+  
+  # Safely extract the value using grep and cut
+  var_value=$(grep "^$var_name=" .env | cut -d= -f2-)
+  
+  if [ -z "$var_value" ] || [ "$var_value" == "your_$default_value" ]; then
+    echo -e "${YELLOW}Warning: $var_name is not set or has default value.${RESET}"
     ENV_ISSUES=1
   else
-    echo -e "${GREEN}$1 is set.${RESET}"
+    echo -e "${GREEN}$var_name is set.${RESET}"
   fi
 }
 
@@ -109,11 +117,55 @@ fi
 
 # Test the application
 echo -e "\n${BOLD}Running tests...${RESET}"
-npm test
+echo -e "${BLUE}Running end-to-end tests...${RESET}"
+npm run test:e2e
 if [ $? -ne 0 ]; then
-  echo -e "${YELLOW}Some tests failed. This might be expected if you're using mock responses.${RESET}"
+  echo -e "${RED}End-to-end tests failed.${RESET}"
+  exit 1
 else
-  echo -e "${GREEN}Tests passed successfully.${RESET}"
+  echo -e "${GREEN}End-to-end tests passed successfully.${RESET}"
+fi
+
+# Optionally run Jest tests if they exist
+echo -e "\n${BLUE}Checking for Jest unit tests...${RESET}"
+npm test -- --passWithNoTests
+if [ $? -ne 0 ]; then
+  echo -e "${YELLOW}Some Jest tests failed or no tests were found. This is expected if you haven't created Jest tests yet.${RESET}"
+else
+  echo -e "${GREEN}Jest tests passed successfully.${RESET}"
+fi
+
+# Setup Discord bot
+echo -e "\n${BOLD}Discord Bot Setup${RESET}"
+echo -e "${BLUE}This step will help configure your Discord bot and check for required permissions.${RESET}"
+echo -e "${BLUE}Would you like to run the Discord bot setup? (y/n)${RESET}"
+read -r SETUP_DISCORD
+
+if [[ $SETUP_DISCORD =~ ^[Yy]$ ]]; then
+  # Check if required packages are installed
+  if ! npm list -g chalk inquirer axios open > /dev/null 2>&1; then
+    echo -e "${YELLOW}Installing required packages for Discord bot setup...${RESET}"
+    npm install --no-save chalk inquirer axios open
+  fi
+  
+  # Create scripts directory if it doesn't exist
+  mkdir -p scripts
+  
+  # Make the Discord bot setup script executable
+  chmod +x scripts/discord-bot-setup.js
+  
+  # Run the Discord bot setup script
+  echo -e "${BLUE}Running Discord bot setup script...${RESET}"
+  node scripts/discord-bot-setup.js
+  
+  if [ $? -ne 0 ]; then
+    echo -e "${YELLOW}Discord bot setup encountered issues. You may need to configure some settings manually.${RESET}"
+  else
+    echo -e "${GREEN}Discord bot setup completed successfully.${RESET}"
+  fi
+else
+  echo -e "${YELLOW}Skipping Discord bot setup. You can run it later with:${RESET}"
+  echo -e "  node scripts/discord-bot-setup.js"
 fi
 
 # Start the application in development mode

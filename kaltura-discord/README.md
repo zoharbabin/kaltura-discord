@@ -184,7 +184,25 @@ You can manage server configurations using the Discord bot commands:
 
 ## Usage
 
+### Discord Bot Setup
+
+The integration includes an automated setup script to help configure your Discord bot:
+
+```bash
+npm run setup:discord
+```
+
+This script will:
+1. Validate your Discord bot token
+2. Check which intents are enabled
+3. Generate an OAuth2 URL for adding the bot to servers
+4. Provide guidance for manual steps in the Discord Developer Portal
+
+For detailed instructions, see the [Discord Bot Setup Guide](docs/discord-bot-setup.md).
+
 ### Adding the Bot to Your Discord Server
+
+The setup script will generate an OAuth2 URL for you, or you can manually create one:
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Select your application
@@ -520,6 +538,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Troubleshooting
 
+For detailed troubleshooting information, please refer to the [Troubleshooting Guide](docs/troubleshooting.md).
+
 ### Common Issues
 
 #### Discord Bot Not Responding
@@ -527,6 +547,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Check if the bot is online in Discord
 - Verify that the bot token is correct in the `.env` file
 - Check the logs for any errors
+- Ensure that the required intents are enabled in the Discord Developer Portal
 
 #### Kaltura API Errors
 
