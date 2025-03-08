@@ -2,6 +2,7 @@ import { Client, Events, GatewayIntentBits, Collection } from 'discord.js';
 import { logger } from '../common/logger';
 import { registerCommands } from './commands';
 import { handleInteraction } from './interactions';
+import { getEnv } from '../common/envService';
 
 // Create a new Discord client
 const client = new Client({
@@ -9,14 +10,16 @@ const client = new Client({
     // Standard intents - these are required for basic functionality
     GatewayIntentBits.Guilds,       // Required for basic guild information
     GatewayIntentBits.GuildMessages, // Required for command handling
+    GatewayIntentBits.GuildVoiceStates, // Required for voice channel activities
+    // GatewayIntentBits.MessageContent, // Required for reading message content
     
     // Privileged intents - only enable these if you need the specific functionality
     // These require explicit approval in the Discord Developer Portal
-    
-    // GatewayIntentBits.MessageContent, // Only needed if bot needs to read message content
-    // GatewayIntentBits.GuildMembers,   // Only needed if bot needs to track member join/leave events
+    // GatewayIntentBits.GuildMembers,   // Needed for member role checking
     // GatewayIntentBits.GuildPresences, // Only needed if bot needs to track user presence updates
   ],
+  // Import Partials from discord.js at the top of the file if needed
+  partials: [], // We don't need partials for this bot's functionality
 });
 
 // Store commands in a collection
@@ -28,7 +31,7 @@ client.commands = new Collection();
 export async function startBot(): Promise<void> {
   try {
     // Get the Discord bot token
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = getEnv('DISCORD_BOT_TOKEN');
     
     // Check if we're in development mode with placeholder token
     if (!token || token === 'your_discord_bot_token') {

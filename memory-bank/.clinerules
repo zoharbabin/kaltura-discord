@@ -6,35 +6,43 @@
    - Use "Kaltura session" or "Kaltura meeting" (not "call" or "conference")
    - Refer to "Discord server" (not "guild" even though API uses this term)
    - Use "embedding" when referring to the in-Discord experience
+   - Use "Discord Activity" when referring to the embedded Watch Together feature
+   - Use "host" when referring to the user controlling playback in Watch Together
 
 2. **Architecture Principles**
    - Maintain clear separation between Discord and Kaltura integration layers
    - Design for stateless operation to enable horizontal scaling
    - Implement graceful degradation for all features
+   - Provide fallback mechanisms for features requiring special API access
 
 3. **Code Organization**
    - Discord Bot code in `/discord` directory
    - API Gateway and services in `/services` directory
    - Shared utilities in `/common` directory
    - Infrastructure as Code in `/infrastructure` directory
+   - Discord Activity code in `/discord-activity` directory with client and server packages
 
 4. **Security Practices**
    - No hardcoded secrets in any code
    - All API keys and tokens managed via environment variables or secret store
+   - Environment variables loaded from .env file with priority over system environment variables
    - Input validation on all user-provided data
    - Principle of least privilege for all service accounts
+   - Secure token exchange for Discord OAuth2 flow
 
 5. **Development Workflow**
    - Feature branches named as `feature/short-description`
    - Pull requests require at least one reviewer
    - All services must have unit tests
    - Integration tests for critical paths
+   - Use setup-and-test.sh script for environment setup and testing
 
 6. **Documentation Standards**
    - API endpoints documented with OpenAPI/Swagger
    - README.md in each service directory
    - Architecture decisions recorded in `/docs/adr` directory
    - User-facing documentation in `/docs/user` directory
+   - Implementation status documented in memory-bank
 
 ## Learning Journal
 
@@ -43,24 +51,35 @@
 - Bot permissions must be carefully scoped to minimum required
 - Slash commands require global registration or per-server registration
 - Activities API is relatively new and has specific requirements
+- Activities API requires server-specific configuration
+- Discord SDK provides message passing capabilities for synchronization
+- OAuth2 flow is required for Discord SDK authentication
 
 ### Kaltura API Insights
 - Kaltura Session (KS) tokens are the primary authentication mechanism
 - Different privileges can be encoded in the KS
 - Virtual Event API provides the most relevant endpoints for our use case
 - User synchronization can be complex due to Kaltura's account model
+- Kaltura Player SDK can be wrapped for custom integration
+- Partner ID and UI config ID are required for player initialization
 
 ### Integration Challenges
 - Mapping Discord's role system to Kaltura's permissions
 - Handling session expiration and renewal
 - Managing the user experience when services are unavailable
 - Balancing security with ease of use
+- Synchronizing video playback across multiple clients
+- Handling network latency and different device capabilities
+- Providing consistent experience across desktop and mobile clients
 
 ### User Experience Considerations
 - Minimize the number of steps to join a meeting
 - Provide clear feedback when operations succeed or fail
 - Consider mobile Discord users in the experience design
 - Ensure accessibility for all user interactions
+- Implement host-based control for synchronized experiences
+- Provide fallback mechanisms for features requiring special API access
+- Design UI to match Discord's theme and interaction patterns
 
 ## Decision Log
 
@@ -83,3 +102,28 @@
    - Decision: Use Kubernetes for container orchestration
    - Rationale: Scalability, resilience, and industry standard practices
    - Date: Initial architecture planning
+
+5. **Dedicated Environment Service**
+   - Decision: Create a dedicated environment service for variable management
+   - Rationale: Ensure .env file values take precedence over system environment variables and prevent circular dependencies
+   - Date: Late implementation phase
+
+6. **Discord Activity Implementation**
+   - Decision: Use Discord's embedded-app-sdk for Watch Together feature
+   - Rationale: Provides seamless, integrated experience within Discord voice channels
+   - Date: March 2025
+
+7. **Host-Based Synchronization**
+   - Decision: Designate one user as the "host" with control over playback
+   - Rationale: Simplifies synchronization model and provides clear authority
+   - Date: March 2025
+
+8. **Fallback Mechanism**
+   - Decision: Provide fallback to custom HTML page for servers without Activities API access
+   - Rationale: Ensures functionality even when Discord Activities API is unavailable
+   - Date: March 2025
+
+9. **Mock Data for Initial Development**
+   - Decision: Use mock data for initial development of Discord Activity server endpoints
+   - Rationale: Allows for faster development and testing without requiring real API credentials
+   - Date: March 2025

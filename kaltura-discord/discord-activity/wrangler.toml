@@ -1,0 +1,56 @@
+name = "discord-activity"
+main = "./packages/server/dist/app.js"
+compatibility_date = "2025-03-08"
+
+# Workers configuration
+workers_dev = false
+usage_model = "bundled"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables
+[vars]
+NODE_ENV = "production"
+
+# Site configuration for static assets
+[site]
+bucket = "./packages/client/dist"
+
+# Development environment
+[env.development]
+name = "discord-activity-dev"
+routes = [
+  { pattern = "discord-dev.zoharbabin.com", custom_domain = true }
+]
+
+# Production environment
+[env.production]
+name = "discord-activity"
+routes = [
+  { pattern = "discord.zoharbabin.com", custom_domain = true }
+]
+
+# Build configuration
+[build]
+command = "pnpm run build:prod"
+watch_dir = ["packages/client/src", "packages/server/src"]
+
+# Triggers
+[triggers]
+crons = []
+
+# KV Namespaces for data storage
+# Uncomment and configure if needed
+# [[kv_namespaces]]
+# binding = "DISCORD_ACTIVITY_DATA"
+# id = "your-kv-namespace-id"
+
+# Durable Objects for state management
+# Uncomment and configure if needed
+# [[durable_objects.bindings]]
+# name = "SESSIONS"
+# class_name = "SessionManager"
+
+# Secrets that need to be set using `wrangler secret put <name>`
+# - CLIENT_SECRET
+# - KALTURA_ADMIN_SECRET
+# - JWT_SECRET

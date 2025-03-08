@@ -1,6 +1,6 @@
-import { ChatInputCommandInteraction, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
+import { ChatInputCommandInteraction, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, codeBlock } from 'discord.js';
 import { logger } from '../common/logger';
-import { kalturaClient, Meeting, MeetingCreateParams } from '../services/kalturaClient';
+import { kalturaClient, Meeting, MeetingCreateParams, VideoSearchParams } from '../services/kalturaClient';
 import { userAuthService, DiscordUser } from '../services/userAuthService';
 import { configService } from '../services/configService';
 
@@ -1000,6 +1000,265 @@ function validateConfigUpdate(section: string, keyPath: string[], value: any): b
   
   // If no specific validation rule matched, return false
   return false;
+}
+
+/**
+ * Handle the kaltura-video-search command
+ * Searches for videos using Kaltura eSearch API
+ */
+export async function handleVideoSearchCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  try {
+    // Defer the reply to give us time to process
+    await interaction.deferReply({ ephemeral: false });
+    
+    // Get command options
+    const searchQuery = interaction.options.getString('query', true);
+    const limit = interaction.options.getInteger('limit') || 5;
+    
+    // Get server ID for server-specific configuration
+    const serverId = interaction.guildId || 'default';
+    
+    // Map Discord user to Kaltura user
+    const discordUser: DiscordUser = {
+      id: interaction.user.id,
+      username: interaction.user.username,
+      discriminator: interaction.user.discriminator || undefined,
+      avatar: interaction.user.avatar || undefined,
+      roles: interaction.member?.roles ?
+        Array.from(
+          // Cast to any to avoid TypeScript errors with roles
+          (interaction.member.roles as any).cache.values()
+        ).map(role => (role as any).name) :
+        undefined
+    };
+    
+    // Get server-specific configuration for command permissions
+    const config = await configService.getServerConfig(serverId);
+    
+    // Check if commands are enabled for this server
+    if (!config.commands.enabled) {
+      await interaction.editReply({
+        content: 'Kaltura commands are disabled for this server.'
+      });
+      return;
+    }
+    
+    // Check if user has permission to use this command
+    const userRoles = discordUser.roles || [];
+    const requiredRoles = config.commands.permissions['kaltura-video-search'] || ['@everyone'];
+    
+    // If @everyone is not in the required roles, check if user has any of the required roles
+    if (!requiredRoles.includes('@everyone')) {
+      const hasPermission = userRoles.some(role =>
+        requiredRoles.some(requiredRole =>
+          role.toLowerCase() === requiredRole.toLowerCase()
+        )
+      );
+      
+      if (!hasPermission) {
+        await interaction.editReply({
+          content: 'You do not have permission to use this command.'
+        });
+        return;
+      }
+    }
+    
+    // Search for videos
+    logger.info('Searching for videos', {
+      user: interaction.user.tag,
+      query: searchQuery,
+      limit
+    });
+    
+    const searchParams: VideoSearchParams = {
+      freeText: searchQuery,
+      limit: limit,
+      page: 1,
+      userId: interaction.user.username // Pass the Discord username for the session
+    };
+    
+    const videos = await kalturaClient.searchVideos(searchParams);
+    
+    if (videos.length === 0) {
+      await interaction.editReply({
+        content: `No videos found matching "${searchQuery}".`
+      });
+      return;
+    }
+    
+    // Create a more visually appealing embed for the response
+    const embed = new EmbedBuilder()
+      .setColor('#00B171') // Kaltura green
+      .setTitle(`Video Search Results: "${searchQuery}"`)
+      .setDescription(`Found ${videos.length} videos matching your search`)
+      .setTimestamp()
+      .setFooter({
+        text: 'Kaltura Video Search • ' + new Date().toLocaleString([], {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      });
+    
+    // If there's a first video, set its image (not thumbnail) for better visibility
+    if (videos.length > 0) {
+      embed.setThumbnail(videos[0].thumbnailUrl);
+    }
+    
+    // Create a mobile-friendly, compact layout focusing on essential information
+    let videoListContent = '';
+    
+    videos.slice(0, Math.min(videos.length, 5)).forEach((video, index) => {
+      const viewsText = video.views === 1 ? '1 view' : `${video.views} views`;
+      const duration = formatDuration(video.duration);
+      
+      // Format title with number and duration - most important info
+      videoListContent += `**${index + 1}. ${video.title}**`;
+      videoListContent += `⏱️ \`${duration}\` • 👁️ ${viewsText} • ID: \`${video.id}\`\n`;
+      
+      // Add a very brief description (if available) - limited to 60 chars for mobile
+      if (video.description && video.description.trim().length > 0) {
+        const shortDesc = video.description.substring(0, 240) + (video.description.length > 240 ? '...' : '');
+        videoListContent += `${shortDesc}\n\n`;
+      }
+    });
+    
+    embed.setDescription(`Found ${videos.length} videos matching your search\n\n${videoListContent}`);
+    
+    // Create a single row with multiple buttons (up to 5 buttons in one row)
+    const row1 = new ActionRowBuilder<ButtonBuilder>();
+    // We don't need row2 anymore since all buttons fit in one row
+    
+    // Create more compact buttons that are easier to tap on mobile
+    videos.slice(0, Math.min(videos.length, 5)).forEach((video, index) => {
+      // Use consistent primary style for all buttons - better for mobile visibility
+      const playButton = new ButtonBuilder()
+        .setCustomId(`play_video_${video.id}`)
+        .setLabel(`${index + 1}`)  // Just the number for maximum tap area
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('▶️');
+      
+      // Put all buttons in a single row for mobile-friendly layout
+      // Discord allows up to 5 buttons per row
+      row1.addComponents(playButton);
+    });
+    
+    // We don't need row2 anymore since all buttons fit in one row
+    
+    // Prepare components array - just using row1 now
+    const components: ActionRowBuilder<ButtonBuilder>[] = [];
+    if (row1.components.length > 0) components.push(row1);
+    
+    // Send the mobile-optimized response
+    await interaction.editReply({
+      embeds: [embed],
+      components: components
+    });
+    
+    logger.info('Video search completed successfully', {
+      user: interaction.user.tag,
+      count: videos.length
+    });
+  } catch (error) {
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-video-search command: ${error.message}`
+      : 'Error handling kaltura-video-search command: Unknown error';
+    
+    logger.error(errorMessage, { error });
+    
+    if (interaction.deferred) {
+      await interaction.editReply({
+        content: 'Failed to search for videos. Please try again later.'
+      });
+    } else {
+      await interaction.reply({
+        content: 'Failed to search for videos. Please try again later.',
+        ephemeral: true
+      });
+    }
+  }
+}
+
+/**
+ * Handle the kaltura-get-ks command
+ * Gets the current Kaltura Session for debugging
+ */
+export async function handleGetKSCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  try {
+    // Defer the reply to give us time to process
+    await interaction.deferReply({ ephemeral: true });
+    
+    // Check if user has admin permissions
+    if (!interaction.memberPermissions?.has('Administrator')) {
+      await interaction.editReply({
+        content: 'You need administrator permissions to use this debug command.'
+      });
+      return;
+    }
+    
+    // Get the current session
+    const session = kalturaClient.getCurrentSession();
+    
+    if (!session) {
+      await interaction.editReply({
+        content: 'No active Kaltura Session found. Try performing an operation that requires a KS first.'
+      });
+      return;
+    }
+    
+    // Create embed for the response
+    const embed = new EmbedBuilder()
+      .setColor('#00B171') // Kaltura green
+      .setTitle('Current Kaltura Session')
+      .setDescription('Debug information for the current Kaltura Session')
+      .addFields(
+        { name: 'User ID', value: session.userId, inline: true },
+        { name: 'Partner ID', value: session.partnerId, inline: true },
+        { name: 'Expiry', value: new Date(session.expiry * 1000).toLocaleString(), inline: true },
+        { name: 'KS', value: codeBlock(typeof session.ks === 'object' ? JSON.stringify(session.ks) : session.ks) },
+        { name: 'Privileges', value: codeBlock(session.privileges || 'None') }
+      )
+      .setTimestamp()
+      .setFooter({ text: 'Kaltura Debug Information' });
+    
+    // Send the response
+    await interaction.editReply({
+      embeds: [embed]
+    });
+    
+    logger.info('Kaltura Session debug info requested', {
+      user: interaction.user.tag
+    });
+  } catch (error) {
+    // Create a more detailed error message
+    const errorMessage = error instanceof Error
+      ? `Error handling kaltura-get-ks command: ${error.message}`
+      : 'Error handling kaltura-get-ks command: Unknown error';
+    
+    logger.error(errorMessage, { error });
+    
+    if (interaction.deferred) {
+      await interaction.editReply({
+        content: 'Failed to get Kaltura Session information. Please try again later.'
+      });
+    } else {
+      await interaction.reply({
+        content: 'Failed to get Kaltura Session information. Please try again later.',
+        ephemeral: true
+      });
+    }
+  }
+}
+
+/**
+ * Format duration in seconds to MM:SS format
+ */
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 // Helper function to capitalize the first letter of a string

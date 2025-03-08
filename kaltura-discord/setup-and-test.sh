@@ -46,6 +46,40 @@ else
   echo -e "${GREEN}npm is installed: $NPM_VERSION${RESET}"
 fi
 
+# Check for pnpm (required for Discord Activity)
+if ! command_exists pnpm; then
+  echo -e "${YELLOW}pnpm is not installed. It's required for Discord Activity.${RESET}"
+  echo -e "${YELLOW}Would you like to install pnpm? (y/n)${RESET}"
+  read -r INSTALL_PNPM
+  
+  if [[ $INSTALL_PNPM =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}Installing pnpm...${RESET}"
+    npm install -g pnpm
+    if [ $? -ne 0 ]; then
+      echo -e "${RED}Failed to install pnpm. Please install it manually.${RESET}"
+      echo -e "${RED}Discord Activity setup will be skipped.${RESET}"
+      SKIP_ACTIVITY=true
+    else
+      echo -e "${GREEN}pnpm installed successfully.${RESET}"
+    fi
+  else
+    echo -e "${YELLOW}Skipping pnpm installation. Discord Activity setup will be skipped.${RESET}"
+    SKIP_ACTIVITY=true
+  fi
+else
+  PNPM_VERSION=$(pnpm -v)
+  echo -e "${GREEN}pnpm is installed: $PNPM_VERSION${RESET}"
+fi
+
+# Check for cloudflared (optional for Discord Activity local development)
+if ! command_exists cloudflared; then
+  echo -e "${YELLOW}cloudflared is not installed. It's recommended for Discord Activity local development.${RESET}"
+  echo -e "${YELLOW}You can install it later if needed.${RESET}"
+else
+  CLOUDFLARED_VERSION=$(cloudflared --version | head -n 1)
+  echo -e "${GREEN}cloudflared is installed: $CLOUDFLARED_VERSION${RESET}"
+fi
+
 # Install dependencies
 echo -e "\n${BOLD}Installing dependencies...${RESET}"
 npm install
@@ -107,12 +141,142 @@ check_env_var "DISCORD_CLIENT_SECRET" "discord_client_secret"
 check_env_var "KALTURA_PARTNER_ID" "kaltura_partner_id"
 check_env_var "KALTURA_ADMIN_SECRET" "kaltura_admin_secret"
 check_env_var "JWT_SECRET" "jwt_secret"
+check_env_var "DISCORD_APPLICATION_ID" "discord_application_id"
 
 if [ $ENV_ISSUES -eq 1 ]; then
   echo -e "\n${YELLOW}Some environment variables are not properly set.${RESET}"
   echo -e "${YELLOW}The application will run in development mode with mock responses.${RESET}"
 else
   echo -e "\n${GREEN}All environment variables are properly set.${RESET}"
+fi
+
+# Setup Discord Activity
+if [ "$SKIP_ACTIVITY" != "true" ]; then
+  echo -e "\n${BOLD}Discord Activity Setup${RESET}"
+  echo -e "${BLUE}This step will set up the Discord Activity for Watch Together feature.${RESET}"
+  echo -e "${BLUE}Would you like to set up the Discord Activity? (y/n)${RESET}"
+  read -r SETUP_ACTIVITY
+  
+  if [[ $SETUP_ACTIVITY =~ ^[Yy]$ ]]; then
+    echo -e "\n${BOLD}Setting up Discord Activity...${RESET}"
+    
+    # Check if Discord Activity .env file exists
+    if [ ! -f discord-activity/.env ]; then
+      echo -e "${YELLOW}No .env file found for Discord Activity. Creating one from .env.example...${RESET}"
+      cp discord-activity/.env.example discord-activity/.env
+      
+      # Copy values from main .env file
+      DISCORD_CLIENT_ID=$(grep "^DISCORD_CLIENT_ID=" .env | cut -d= -f2-)
+      DISCORD_CLIENT_SECRET=$(grep "^DISCORD_CLIENT_SECRET=" .env | cut -d= -f2-)
+      KALTURA_PARTNER_ID=$(grep "^KALTURA_PARTNER_ID=" .env | cut -d= -f2-)
+      KALTURA_PLAYER_ID=$(grep "^KALTURA_PLAYER_ID=" .env | cut -d= -f2- || echo "46022343")
+      
+      # Update Discord Activity .env file
+      sed -i "s/^VITE_CLIENT_ID=.*/VITE_CLIENT_ID=$DISCORD_CLIENT_ID/" discord-activity/.env
+      sed -i "s/^CLIENT_SECRET=.*/CLIENT_SECRET=$DISCORD_CLIENT_SECRET/" discord-activity/.env
+      sed -i "s/^VITE_KALTURA_PARTNER_ID=.*/VITE_KALTURA_PARTNER_ID=$KALTURA_PARTNER_ID/" discord-activity/.env
+      sed -i "s/^VITE_KALTURA_PLAYER_ID=.*/VITE_KALTURA_PLAYER_ID=$KALTURA_PLAYER_ID/" discord-activity/.env
+      
+      echo -e "${GREEN}Created and configured Discord Activity .env file.${RESET}"
+    else
+      echo -e "${GREEN}Found existing Discord Activity .env file.${RESET}"
+    fi
+    
+    # Install Discord Activity dependencies
+    echo -e "\n${BOLD}Installing Discord Activity dependencies...${RESET}"
+    cd discord-activity && pnpm install
+    if [ $? -ne 0 ]; then
+      echo -e "${RED}Failed to install Discord Activity dependencies.${RESET}"
+      cd ..
+    else
+      echo -e "${GREEN}Discord Activity root dependencies installed successfully.${RESET}"
+      
+      # Install client package dependencies
+      echo -e "\n${BOLD}Installing Discord Activity client dependencies...${RESET}"
+      cd packages/client && pnpm install
+      if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install Discord Activity client dependencies.${RESET}"
+        cd ../..
+      else
+        echo -e "${GREEN}Discord Activity client dependencies installed successfully.${RESET}"
+        cd ../..
+      fi
+      
+      # Install server package dependencies
+      echo -e "\n${BOLD}Installing Discord Activity server dependencies...${RESET}"
+      cd packages/server && pnpm install
+      if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install Discord Activity server dependencies.${RESET}"
+        cd ../..
+      else
+        echo -e "${GREEN}Discord Activity server dependencies installed successfully.${RESET}"
+        cd ../..
+      fi
+      
+      # Build Discord Activity
+      echo -e "\n${BOLD}Building Discord Activity...${RESET}"
+      pnpm run build
+      if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to build Discord Activity.${RESET}"
+      else
+        echo -e "${GREEN}Discord Activity built successfully.${RESET}"
+      fi
+      
+      cd ..
+    fi
+    
+    # Update configuration to enable Discord Activity
+    echo -e "\n${BOLD}Would you like to enable Discord Activity in the configuration? (y/n)${RESET}"
+    read -r ENABLE_ACTIVITY
+    
+    if [[ $ENABLE_ACTIVITY =~ ^[Yy]$ ]]; then
+      # Get Discord Application ID
+      DISCORD_APP_ID=$(grep "^DISCORD_APPLICATION_ID=" .env | cut -d= -f2-)
+      
+      if [ -z "$DISCORD_APP_ID" ] || [ "$DISCORD_APP_ID" == "your_discord_application_id" ]; then
+        echo -e "${YELLOW}DISCORD_APPLICATION_ID is not set in .env file.${RESET}"
+        echo -e "${YELLOW}Please enter your Discord Application ID:${RESET}"
+        read -r DISCORD_APP_ID
+      fi
+      
+      # Create a server-specific configuration override
+      echo -e "\n${BOLD}Creating server-specific configuration override...${RESET}"
+      echo -e "${YELLOW}Please enter the Discord server ID to enable Activities API for:${RESET}"
+      read -r SERVER_ID
+      
+      if [ -n "$SERVER_ID" ]; then
+        mkdir -p config/overrides
+        
+        # Check if server config already exists
+        if [ -f "config/overrides/$SERVER_ID.json" ]; then
+          # Update existing config
+          # This is a simplified approach - in a real scenario, you might want to use jq for proper JSON manipulation
+          TMP_FILE=$(mktemp)
+          cat "config/overrides/$SERVER_ID.json" | \
+            sed 's/"features": {/"features": {\n    "activitiesApi": true,\n    "discordApplicationId": "'$DISCORD_APP_ID'",/' > "$TMP_FILE"
+          mv "$TMP_FILE" "config/overrides/$SERVER_ID.json"
+        else
+          # Create new config
+          cat > "config/overrides/$SERVER_ID.json" << EOF
+{
+  "features": {
+    "activitiesApi": true,
+    "discordApplicationId": "$DISCORD_APP_ID"
+  }
+}
+EOF
+        fi
+        
+        echo -e "${GREEN}Discord Activity enabled for server $SERVER_ID.${RESET}"
+      else
+        echo -e "${YELLOW}No server ID provided. Skipping configuration.${RESET}"
+      fi
+    else
+      echo -e "${YELLOW}Skipping Discord Activity configuration. You can enable it later by updating the server configuration.${RESET}"
+    fi
+  else
+    echo -e "${YELLOW}Skipping Discord Activity setup.${RESET}"
+  fi
 fi
 
 # Test the application
@@ -180,6 +344,12 @@ else
   echo -e "\n${BOLD}To start the application manually, run:${RESET}"
   echo -e "  npm run dev    # For development mode"
   echo -e "  npm start      # For production mode"
+  
+  if [ "$SKIP_ACTIVITY" != "true" ]; then
+    echo -e "\n${BOLD}To start the Discord Activity, run:${RESET}"
+    echo -e "  cd discord-activity && pnpm dev"
+    echo -e "  cd discord-activity && pnpm tunnel    # In another terminal for local testing"
+  fi
 fi
 
 echo -e "\n${BOLD}Setup and test completed.${RESET}"

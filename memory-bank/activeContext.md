@@ -2,71 +2,85 @@
 
 ## Current Focus
 
-We have completed the mid-implementation phase of the Kaltura-Discord integration project and are now focusing on end-to-end testing and preparing for the next development cycle. Our current focus areas are:
+We have completed the late-implementation phase of the Kaltura-Discord integration project and are now focusing on finalizing the Discord Activity implementation, improving deployment processes, and preparing for the next development cycle. Our current focus areas are:
 
-1. Conducting comprehensive end-to-end testing of the Discord Bot Integration MVP (Phase 1)
-2. Fixing identified issues from testing
-3. Finalizing documentation for the MVP usage
-4. Preparing for Phase 2: Enhanced Notifications & User Sync
+1. Completing the Discord Activity implementation for Watch Together feature (Phase 3)
+2. Streamlining deployment processes for both development and production
+3. Simplifying environment variable management
+4. Finalizing end-to-end testing of the Discord Bot Integration MVP (Phase 1)
+5. Preparing for Phase 2: Enhanced Notifications & User Sync
 
 ## Current Priorities
 
-1. **End-to-End Testing**:
-   - Fixed Discord command registration issue (required options must be before optional ones)
-   - Created comprehensive end-to-end testing documentation
-   - Testing the Discord bot commands with actual Discord server
-   - Testing API Gateway endpoints with actual requests
-   - Verifying Kaltura API integration with both mock and real responses
+1. **Discord Activity Implementation**:
+   - Complete the client-side implementation with real-time synchronization
+   - Replace mock endpoints with real Kaltura API calls
+   - Enhance user presence and interaction features
+   - Test across different Discord clients and network conditions
 
-2. **Issue Resolution**:
-   - Fix JWT_SECRET environment variable configuration
-   - Enhance error handling in mock responses
-   - Improve handling of undefined values in meeting data
-   - Address Discord API validation errors
+2. **Deployment Process Improvements**:
+   - Implemented deployment scripts for both development and production
+   - Simplified environment variable management with a single `.env` file
+   - Added support for environment variable placeholders in configuration
+   - Created comprehensive documentation for deployment processes
 
-3. **Documentation Completion**:
-   - Completed README with setup and usage instructions
-   - Created quick-start guide for essential setup steps
-   - Documented architecture overview and system patterns
-   - Created testing guides for different scenarios
-   - Documented API endpoints and their usage
+3. **Environment Variable Management**:
+   - Simplified to a single `.env` file for both components
+   - Fixed issues with special characters in environment variables
+   - Added support for environment-specific variables in deployment scripts
+   - Enhanced configuration service to support environment variable placeholders
 
-4. **Preparation for Next Phase**:
-   - Finalizing versioning strategy for commands and APIs
-   - Planning implementation of notification service
-   - Researching webhook handling for Kaltura events
-   - Designing user profile synchronization
+4. **End-to-End Testing**:
+   - Completed successful end-to-end test with actual Discord and Kaltura credentials
+   - Verified Discord bot commands functionality with actual Discord server
+   - Tested API Gateway endpoints with actual requests
+   - Verified Kaltura API integration with both mock and real responses
+
+5. **Issue Resolution**:
+   - Fixed JWT_SECRET environment variable configuration
+   - Enhanced error handling in mock responses
+   - Fixed Discord Activity URL configuration to prioritize environment variables
+   - Improved handling of undefined values in meeting data
+   - Addressed Discord API validation errors
 
 ## Recent Changes
 
-- Fixed Discord command registration issue with required/optional option ordering
-- Created comprehensive end-to-end testing documentation
-- Created architecture overview and system patterns documentation
-- Implemented error handling for listMeetings function
+- Implemented deployment scripts for both development and production
+- Simplified environment variable management with a single `.env` file
+- Fixed issues with special characters in environment variables
+- Added support for environment variable placeholders in configuration
+- Fixed Discord Activity URL configuration to prioritize environment variables
+- Enhanced configuration service to support environment variable placeholders
+- Successfully set up and tested the Discord Activity implementation
+- Configured Discord Activity for server ID 1283874310720716890
+- Implemented host-based synchronization for Watch Together feature
+- Created client-side components for Discord Activity (player, sync service, UI)
+- Created server-side endpoints for Discord Activity (token exchange, session generation)
+- Implemented fallback mechanism for servers without Activities API access
 - Created setup and test script for environment setup
-- Added detailed troubleshooting guides for common issues
-- Created status report with current project state
-- Documented next steps for project completion
+- Successfully tested video search and Discord Activity launch
 
 ## Next Steps
 
 1. **Immediate Actions**:
-   - Run complete end-to-end test with actual Discord and Kaltura credentials
-   - Fix JWT_SECRET in environment configuration
-   - Address any issues identified during end-to-end testing
-   - Complete API documentation with examples
+   - Complete the Discord Activity implementation by replacing mock endpoints with real API calls
+   - Enhance user presence features in the Discord Activity
+   - Optimize synchronization for various network conditions
+   - Add analytics for usage tracking
+   - Test deployment scripts with real production environment
 
 2. **Upcoming Milestones**:
-   - Complete Phase 1 (Discord Bot Integration MVP)
+   - Complete Phase 3 (Discord Activity for Watch Together)
    - Implement versioning for commands and APIs
    - Begin implementation of Phase 2 (Enhanced Notifications & User Sync)
-   - Research Discord Activities API for Phase 3 (Embedded Experience)
+   - Prepare for production deployment
 
 3. **Technical Improvements**:
    - Enhance error handling with more detailed information
-   - Improve mock responses to provide consistent data
+   - Improve mobile compatibility for Discord Activity
    - Add validation to prevent undefined values in critical fields
    - Implement more comprehensive automated tests
+   - Optimize performance for high-traffic scenarios
 
 ## Decisions Made
 
@@ -76,6 +90,14 @@ We have completed the mid-implementation phase of the Kaltura-Discord integratio
 - Use MongoDB for notification storage (recommended)
 - Enhance role mapping with configurable approach
 - Required options must be placed before optional options in Discord commands
+- Implement Discord Activity for Watch Together feature using embedded-app-sdk
+- Use Vite for frontend development of Discord Activity
+- Implement host-based synchronization mechanism for video playback
+- Provide fallback mechanism for servers without Activities API access
+- Simplify environment variable management with a single `.env` file
+- Set environment-specific variables in deployment scripts at runtime
+- Use environment variable placeholders in configuration
+- Prioritize environment variables over configuration values
 
 ## Open Questions
 
@@ -84,10 +106,13 @@ We have completed the mid-implementation phase of the Kaltura-Discord integratio
 3. How will we handle backward compatibility for older Discord servers?
 4. What level of customization should be allowed for embedded experiences?
 5. How should we handle error recovery in production environments?
+6. How can we further optimize synchronization in the Watch Together feature?
+7. What additional features should be added to the Discord Activity in future iterations?
+8. How should we handle environment variable management in a containerized environment?
 
 ## Current Blockers
 
-- Need Discord developer account with Activities API access for Phase 3
-- Require Kaltura API credentials for production testing
+- Need to optimize Discord Activity for mobile clients
+- Need to implement analytics for usage tracking
+- Need to test deployment scripts with real production environment
 - Awaiting stakeholder feedback on notification system priorities
-- JWT_SECRET not properly configured in environment variables

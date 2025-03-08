@@ -1,0 +1,30 @@
+{
+  "name": "kaltura-discord-activity",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Kaltura Watch Together Discord Activity",
+  "main": "index.js",
+  "scripts": {
+    "dev": "pnpm run --filter \"./packages/**\" --parallel dev",
+    "build": "pnpm run --filter \"./packages/**\" --parallel build",
+    "build:dev": "pnpm run --filter \"./packages/**\" --parallel build:dev",
+    "build:prod": "pnpm run --filter \"./packages/**\" --parallel build:prod",
+    "tunnel": "cloudflared tunnel --url http://localhost:3001",
+    "tunnel:run": "cloudflared tunnel run discord-tunnel",
+    "deploy": "npm run build:prod && npm run tunnel:run"
+  },
+  "author": "Kaltura",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "nodemon": "^3.1.0",
+    "npm-run-all2": "^7.0.0",
+    "rimraf": "^6.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.8.0"
+  }
+}

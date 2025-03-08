@@ -1,6 +1,6 @@
 # Kaltura-Discord Integration
 
-A seamless integration between Kaltura's meeting products (Webinar, Interactive Meeting Room, Virtual Classroom) and Discord, allowing users to launch, join, and interact with Kaltura meetings directly from Discord without additional installations.
+A seamless integration between Kaltura's video platform and Discord, allowing users to share, watch together, and interact with Kaltura videos directly from Discord without additional installations.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ A seamless integration between Kaltura's meeting products (Webinar, Interactive 
 - [Usage](#usage)
 - [Discord Commands](#discord-commands)
 - [API Endpoints](#api-endpoints)
+- [Discord Activity](#discord-activity)
 - [Development](#development)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -23,20 +24,21 @@ A seamless integration between Kaltura's meeting products (Webinar, Interactive 
 
 ## Overview
 
-The Kaltura-Discord integration bridges the gap between Discord's community-focused platform and Kaltura's professional virtual meeting solutions. This integration enables educational institutions, businesses, and communities to leverage both platforms' strengths:
+The Kaltura-Discord integration bridges the gap between Discord's community-focused platform and Kaltura's professional video platform. This integration enables educational institutions, businesses, and communities to leverage both platforms' strengths:
 
 - **Discord**: Community building, persistent chat, voice channels, and social engagement
-- **Kaltura**: Enterprise-grade virtual classrooms, webinars, and interactive meeting rooms
+- **Kaltura**: Enterprise-grade video management, streaming, and interactive features
 
-By integrating these platforms, we create a seamless experience that eliminates friction between community engagement and structured virtual events.
+By integrating these platforms, we create a seamless experience that eliminates friction between community engagement and video content.
 
 ## Features
 
-- **Discord Bot Integration**: Launch, join, and manage Kaltura meetings directly from Discord
+- **Discord Bot Integration**: Share, search, and manage Kaltura videos directly from Discord
+- **Watch Together**: Watch Kaltura videos together in Discord voice channels
 - **Automatic Authentication**: Discord identity is used to authenticate with Kaltura automatically
 - **Role-Based Access**: Discord roles determine Kaltura permissions without manual configuration
 - **Server-Specific Configuration**: Each Discord server can have its own configuration
-- **Secure Link Generation**: Generate secure meeting join links with appropriate permissions
+- **Secure Link Generation**: Generate secure video links with appropriate permissions
 - **API Gateway**: RESTful API for integration with other services
 
 ## Architecture
@@ -48,13 +50,15 @@ The integration is built using a microservices architecture with the following c
 3. **Kaltura Integration Service**: Interfaces with Kaltura APIs
 4. **User Authentication Service**: Manages identity mapping and token generation
 5. **Configuration Service**: Manages server-specific configurations
+6. **Discord Activity Service**: Provides embedded video watching experience
 
 ## Prerequisites
 
 - Node.js v18 or higher
-- npm v8 or higher
+- npm v8 or higher (or pnpm v8 or higher)
 - Discord Bot Token and Client ID (from [Discord Developer Portal](https://discord.com/developers/applications))
 - Kaltura Partner ID and Admin Secret (from Kaltura Management Console)
+- Cloudflare account (for production deployment)
 
 ## Installation
 
@@ -76,19 +80,20 @@ The integration is built using a microservices architecture with the following c
 
 4. Edit the `.env` file with your credentials:
    ```
-   # Discord Bot Configuration
+   # Discord Configuration
    DISCORD_BOT_TOKEN=your_discord_bot_token
    DISCORD_CLIENT_ID=your_discord_client_id
    DISCORD_CLIENT_SECRET=your_discord_client_secret
+   DISCORD_APPLICATION_ID=your_discord_application_id
    
    # Kaltura API Configuration
    KALTURA_PARTNER_ID=your_kaltura_partner_id
    KALTURA_ADMIN_SECRET=your_kaltura_admin_secret
    KALTURA_API_ENDPOINT=https://www.kaltura.com/api_v3
+   KALTURA_PLAYER_ID=your_kaltura_player_id
    
    # API Gateway Configuration
    API_PORT=3000
-   NODE_ENV=development
    
    # JWT Configuration
    JWT_SECRET=your_jwt_secret
@@ -98,18 +103,13 @@ The integration is built using a microservices architecture with the following c
    LOG_LEVEL=info
    ```
 
-5. Build the project:
-   ```bash
-   npm run build
-   ```
-
-6. Create necessary directories:
+5. Create necessary directories:
    ```bash
    mkdir -p logs
    mkdir -p config/overrides
    ```
 
-7. Run the setup and test script:
+6. Run the setup and test script:
    ```bash
    chmod +x setup-and-test.sh
    ./setup-and-test.sh
@@ -158,10 +158,7 @@ You can manage server configurations using the Discord bot commands:
     "enabled": true,
     "prefix": "",
     "permissions": {
-      "kaltura-start": ["@everyone"],
-      "kaltura-join": ["@everyone"],
-      "kaltura-list": ["@everyone"],
-      "kaltura-end": ["@everyone"],
+      "kaltura-video-search": ["@everyone"],
       "kaltura-config-view": ["admin"],
       "kaltura-config-update": ["admin"],
       "kaltura-config-reset": ["admin"]
@@ -177,7 +174,22 @@ You can manage server configurations using the Discord bot commands:
   "features": {
     "embedding": true,
     "recording": true,
-    "user_sync": true
+    "user_sync": true,
+    "activitiesApi": false,
+    "discordApplicationId": "",
+    "discordActivityUrl": "{{DISCORD_ACTIVITY_URL}}"
+  },
+  "kaltura": {
+    "session": {
+      "privileges": {
+        "default": "",
+        "video": "genieid:default,privacycontext:2361952EPea2653e,virtualeventid:2361952,searchcontext:2361952EPea2653e,eventsessioncontextid:*,appid:eventplatform-hackerspacelive.events.kaltura.com",
+        "meeting": "virtualeventid:2361952,eventsessioncontextid:*,appid:*"
+      }
+    },
+    "video": {
+      "embedBaseUrl": "https://hackerspacelive.events.kaltura.com/media/t/"
+    }
   }
 }
 ```
@@ -222,35 +234,28 @@ The setup script will generate an OAuth2 URL for you, or you can manually create
 
 For development:
 ```bash
-npm run dev
+./deploy-dev.sh
 ```
 
 For production:
 ```bash
-npm start
+./deploy-prod.sh
 ```
 
 ## Discord Commands
 
 The integration provides the following Discord slash commands:
 
-### Meeting Management
+### Video Management
 
-- `/kaltura-start`: Start a new Kaltura meeting
+- `/kaltura-video-search`: Search for Kaltura videos
   - Options:
-    - `type`: Type of meeting (webinar, meeting, classroom)
-    - `title`: Title of the meeting
-    - `description`: Optional description of the meeting
+    - `query`: Search query
+    - `limit`: Maximum number of results (optional)
 
-- `/kaltura-join`: Join an existing Kaltura meeting
+- `/kaltura-video-info`: Get information about a Kaltura video
   - Options:
-    - `meeting-id`: ID of the meeting to join
-
-- `/kaltura-list`: List all active Kaltura meetings for this server
-
-- `/kaltura-end`: End a Kaltura meeting
-  - Options:
-    - `meeting-id`: ID of the meeting to end
+    - `video-id`: ID of the video
 
 ### Configuration Management
 
@@ -313,122 +318,102 @@ Response:
 }
 ```
 
-### Meeting Endpoints
+### Video Endpoints
 
-#### List Meetings
+#### Search Videos
 
 ```
-GET /api/meetings
+GET /api/kaltura/videos?query=search_term&limit=10
 ```
 
 Response:
 ```json
 {
-  "meetings": [
+  "videos": [
     {
-      "id": "meeting_id",
-      "title": "Meeting Title",
-      "description": "Meeting Description",
-      "type": "webinar",
-      "status": "active",
-      "ownerId": "discord_123456789",
+      "id": "video_id",
+      "title": "Video Title",
+      "description": "Video Description",
+      "thumbnailUrl": "https://kaltura.com/thumbnail/video_id",
+      "duration": 120,
       "createdAt": "2023-01-01T00:00:00.000Z",
-      "joinUrl": "https://kaltura.com/join/meeting_id"
+      "views": 100
     }
   ]
 }
 ```
 
-#### Get Meeting
+#### Get Video
 
 ```
-GET /api/meetings/:id
+GET /api/kaltura/video/:id
 ```
 
 Response:
 ```json
 {
-  "meeting": {
-    "id": "meeting_id",
-    "title": "Meeting Title",
-    "description": "Meeting Description",
-    "type": "webinar",
-    "status": "active",
-    "ownerId": "discord_123456789",
+  "video": {
+    "id": "video_id",
+    "title": "Video Title",
+    "description": "Video Description",
+    "thumbnailUrl": "https://kaltura.com/thumbnail/video_id",
+    "duration": 120,
     "createdAt": "2023-01-01T00:00:00.000Z",
-    "joinUrl": "https://kaltura.com/join/meeting_id"
+    "views": 100,
+    "playUrl": "https://kaltura.com/play/video_id"
   }
 }
 ```
 
-#### Create Meeting
+#### Generate Session
 
 ```
-POST /api/meetings
+POST /api/kaltura/session
 ```
 
 Request body:
 ```json
 {
-  "title": "Meeting Title",
-  "description": "Meeting Description",
-  "type": "webinar"
+  "videoId": "video_id",
+  "userId": "discord_123456789"
 }
 ```
 
 Response:
 ```json
 {
-  "meeting": {
-    "id": "meeting_id",
-    "title": "Meeting Title",
-    "description": "Meeting Description",
-    "type": "webinar",
-    "status": "active",
-    "ownerId": "discord_123456789",
-    "createdAt": "2023-01-01T00:00:00.000Z",
-    "joinUrl": "https://kaltura.com/join/meeting_id"
-  },
-  "joinUrl": "https://kaltura.com/join/meeting_id?token=jwt_token"
+  "ks": "kaltura_session_token"
 }
 ```
 
-#### End Meeting
+## Discord Activity
 
-```
-DELETE /api/meetings/:id
-```
+The integration includes a Discord Activity for watching Kaltura videos together in Discord voice channels.
 
-Response:
-```json
-{
-  "success": true,
-  "message": "Meeting ended successfully"
-}
-```
+### Features
 
-#### Generate Join URL
+- Watch Kaltura videos together in Discord voice channels
+- Synchronized playback across all participants
+- Host controls for playback (play, pause, seek)
+- Real-time presence information
+- Chat while watching
 
-```
-POST /api/meetings/:id/join
-```
+### Usage
 
-Response:
-```json
-{
-  "joinUrl": "https://kaltura.com/join/meeting_id?token=jwt_token",
-  "meeting": {
-    "id": "meeting_id",
-    "title": "Meeting Title",
-    "description": "Meeting Description",
-    "type": "webinar",
-    "status": "active",
-    "ownerId": "discord_123456789",
-    "createdAt": "2023-01-01T00:00:00.000Z",
-    "joinUrl": "https://kaltura.com/join/meeting_id"
-  }
-}
-```
+1. Share a Kaltura video in Discord using the `/kaltura-video-search` command
+2. Join a voice channel
+3. Click the "Watch Together" button
+4. The Discord Activity will launch in the voice channel
+5. All participants in the voice channel can watch the video together
+
+### Technical Details
+
+The Discord Activity is built using:
+- Vite for frontend development
+- TypeScript for type safety
+- Discord's Embedded App SDK for voice channel integration
+- Kaltura Player for video playback
+- Custom synchronization service for playback synchronization
 
 ## Development
 
@@ -439,16 +424,36 @@ kaltura-discord/
 ├── config/
 │   ├── default_config.json
 │   └── overrides/
+├── discord-activity/
+│   ├── packages/
+│   │   ├── client/
+│   │   │   ├── src/
+│   │   │   │   ├── discordSdk.ts
+│   │   │   │   ├── kalturaPlayer.ts
+│   │   │   │   ├── main.ts
+│   │   │   │   ├── style.css
+│   │   │   │   └── syncService.ts
+│   │   │   ├── index.html
+│   │   │   └── package.json
+│   │   └── server/
+│   │       ├── src/
+│   │       │   ├── app.ts
+│   │       │   └── utils.ts
+│   │       └── package.json
+│   ├── config.yml
+│   └── package.json
 ├── docs/
 ├── logs/
 ├── src/
 │   ├── common/
+│   │   ├── envService.ts
 │   │   └── logger.ts
 │   ├── discord/
 │   │   ├── bot.ts
 │   │   ├── commandHandlers.ts
 │   │   ├── commands.ts
-│   │   └── interactions.ts
+│   │   ├── interactions.ts
+│   │   └── kalturaActivity.ts
 │   ├── services/
 │   │   ├── apiGateway.ts
 │   │   ├── configService.ts
@@ -457,30 +462,35 @@ kaltura-discord/
 │   └── index.ts
 ├── tests/
 │   └── end-to-end-test.js
-├── .dockerignore
 ├── .env.example
-├── .eslintrc.json
-├── .gitignore
-├── CHANGELOG.md
-├── CODE_OF_CONDUCT.md
-├── CONTRIBUTING.md
-├── Dockerfile
-├── jest.config.js
-├── LICENSE
+├── cleanup-env.sh
+├── deploy-dev.sh
+├── deploy-prod.sh
 ├── package.json
 ├── README.md
-├── SECURITY.md
-├── setup-and-test.sh
+├── simplify-env.sh
+├── test-before-deploy.sh
 └── tsconfig.json
 ```
 
 ### Development Workflow
 
-1. Make changes to the source code
-2. Run linting: `npm run lint`
-3. Run tests: `npm test`
-4. Build the project: `npm run build`
-5. Start the development server: `npm run dev`
+1. Set up the environment:
+   ```bash
+   ./simplify-env.sh
+   ```
+
+2. Start the development server:
+   ```bash
+   ./deploy-dev.sh
+   ```
+
+3. Make changes to the source code
+
+4. Test your changes:
+   ```bash
+   ./test-before-deploy.sh
+   ```
 
 ## Testing
 
@@ -500,28 +510,48 @@ node tests/end-to-end-test.js
 
 ## Deployment
 
-### Prerequisites
+### Development Deployment
 
-- Node.js v18 or higher
-- npm v8 or higher
-- Discord Bot Token and Client ID
-- Kaltura Partner ID and Admin Secret
-
-### Deployment Steps
-
-1. Clone the repository on your server
-2. Install dependencies: `npm install --production`
-3. Create a `.env` file with your production credentials
-4. Build the project: `npm run build`
-5. Start the application: `npm start`
-
-### Docker Deployment
-
-A Dockerfile is provided for containerized deployment:
+For local development with a Cloudflare tunnel:
 
 ```bash
-docker build -t kaltura-discord .
-docker run -p 3000:3000 --env-file .env kaltura-discord
+./deploy-dev.sh
+```
+
+This script will:
+1. Load environment variables from `.env` file
+2. Set development-specific environment variables
+3. Build both the main Discord bot and the Discord Activity component
+4. Set up a Cloudflare tunnel to expose the local server
+5. Start both servers
+
+### Production Deployment
+
+For production deployment to Cloudflare:
+
+```bash
+./deploy-prod.sh
+```
+
+This script will:
+1. Load environment variables from `.env` file
+2. Set production-specific environment variables
+3. Run tests before deployment
+4. Build both components with production optimizations
+5. Deploy to Cloudflare using Wrangler
+
+### Environment Management
+
+The project uses a simplified approach to environment management:
+
+1. A single `.env` file for both components
+2. Environment-specific variables set by deployment scripts at runtime
+3. Symbolic link for shared environment file between components
+
+To simplify environment variable management:
+
+```bash
+./simplify-env.sh
 ```
 
 ## Contributing
@@ -560,6 +590,13 @@ For detailed troubleshooting information, please refer to the [Troubleshooting G
 - Ensure that the `config/default_config.json` file exists and is valid JSON
 - Check if the `config/overrides` directory exists and is writable
 - Verify that server-specific configurations are correctly formatted
+
+#### Discord Activity Issues
+
+- Ensure that the Discord Application ID is correct
+- Verify that the Discord Activity URL is accessible
+- Check if the user is in a voice channel
+- Look for specific error messages in the logs
 
 ### Logs
 

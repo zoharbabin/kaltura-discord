@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaltura Watch Together</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+    }
+    .player-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+      color: #fff;
+      font-size: 24px;
+      z-index: 100;
+    }
+    .loading.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" class="loading">Loading Kaltura Player...</div>
+  <div class="player-container" id="player-container"></div>
+
+  <script>
+    // Get URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const partnerId = urlParams.get('partnerId');
+    const uiconfId = urlParams.get('uiconfId');
+    const entryId = urlParams.get('entryId');
+    const title = urlParams.get('title') || 'Kaltura Video';
+    
+    // Set the page title
+    document.title = `Watch Together: ${title}`;
+    
+    // Create the iframe URL
+    const iframeUrl = `https://cdnapisec.kaltura.com/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${entryId}`;
+    
+    // Create and append the iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = iframeUrl;
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+    iframe.setAttribute('webkitallowfullscreen', '');
+    iframe.setAttribute('mozallowfullscreen', '');
+    
+    // Hide loading when iframe loads
+    iframe.onload = function() {
+      document.getElementById('loading').classList.add('hidden');
+    };
+    
+    // Append the iframe to the container
+    document.getElementById('player-container').appendChild(iframe);
+    
+    // Listen for messages from Discord
+    window.addEventListener('message', (event) => {
+      console.log('Received message:', event.data);
+      // Handle any Discord SDK messages here
+      
+      // In the future, this could be used to implement synchronization
+      // between multiple viewers using the Discord SDK
+    });
+    
+    // Initialize Discord SDK if available
+    if (window.DiscordSDK) {
+      try {
+        const discordSdk = new window.DiscordSDK();
+        discordSdk.ready().then(() => {
+          console.log('Discord SDK ready');
+        }).catch(err => {
+          console.error('Discord SDK error:', err);
+        });
+      } catch (e) {
+        console.error('Failed to initialize Discord SDK:', e);
+      }
+    }
+  </script>
+</body>
+</html>

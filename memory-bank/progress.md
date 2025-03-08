@@ -2,16 +2,16 @@
 
 ## Project Status: Late Implementation Phase
 
-Current overall progress: **75%**
+Current overall progress: **90%**
 
 ## Milestone Overview
 
 | Phase | Milestone | Status | Progress | Target Completion |
 |-------|-----------|--------|----------|-------------------|
-| **1** | Discord Bot Integration (MVP) | In Progress | 90% | TBD |
+| **1** | Discord Bot Integration (MVP) | In Progress | 95% | TBD |
 | **2** | Enhanced Notifications & User Sync | In Progress | 15% | TBD |
-| **3** | Embedded Activity Experience | Not Started | 0% | TBD |
-| **4** | Production Scaling & Monitoring | Not Started | 0% | TBD |
+| **3** | Embedded Activity Experience | In Progress | 85% | TBD |
+| **4** | Production Scaling & Monitoring | In Progress | 40% | TBD |
 
 ## Phase 1: Discord Bot Integration (MVP)
 
@@ -30,7 +30,7 @@ Current overall progress: **75%**
 | Implement configuration commands | Completed | Commands for viewing, updating, and resetting configuration |
 | Fix command registration issues | Completed | Required options now placed before optional ones |
 | Create end-to-end testing documentation | Completed | Comprehensive testing guides created |
-| Test end-to-end flow | In Progress | Initial tests with mock responses successful |
+| Test end-to-end flow | Completed | Successfully tested with actual Discord and Kaltura credentials |
 | Document MVP usage | Completed | README, quick-start guide, and architecture docs created |
 
 ## Phase 2: Enhanced Notifications & User Sync
@@ -49,17 +49,33 @@ Current overall progress: **75%**
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Research Activities API capabilities | Not Started | - |
-| Design embedded experience | Not Started | - |
-| Implement Activity integration | Not Started | - |
-| Develop fallback mechanisms | Not Started | - |
-| Test across different clients | Not Started | - |
-| Document embedded experience | Not Started | - |
+| Research Activities API capabilities | Completed | Reviewed Discord Activity Starter example |
+| Design embedded experience | Completed | Created ADR for Discord Activity implementation |
+| Create implementation plan | Completed | Detailed plan in discord-activity-implementation-plan.md |
+| Apply for Activities API access | Completed | Access granted and configured for server ID 1283874310720716890 |
+| Set up project structure | Completed | Following Discord Activity Starter example |
+| Implement Discord SDK integration | Completed | Implemented in discordSdk.ts |
+| Develop Kaltura player integration | Completed | Implemented in kalturaPlayer.ts |
+| Implement synchronization mechanism | Completed | Implemented host-based synchronization in syncService.ts |
+| Create user interface | Completed | Implemented Discord-themed UI with playback controls |
+| Test across different clients | In Progress | Initial testing successful, need to test on mobile |
+| Document embedded experience | Completed | Updated documentation with implementation details |
+| Replace mock endpoints with real API calls | In Progress | Created implementation plan in code-cleanup-recommendations.md |
+| Enhance user presence features | Not Started | Basic implementation in place, needs enhancement |
+| Optimize for different network conditions | Not Started | Basic synchronization working, needs optimization |
+| Add analytics for usage tracking | Not Started | - |
+| Create deployment scripts | Completed | Created and implemented deploy-dev.sh and deploy-prod.sh |
+| Configure Cloudflare deployment | In Progress | Created template in wrangler-config.md |
 
 ## Phase 4: Production Scaling & Monitoring
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Create deployment and cleanup plan | Completed | Comprehensive plan in deployment-and-cleanup-plan.md |
+| Create development deployment script | Completed | Implemented deploy-dev.sh with Cloudflare tunnel setup |
+| Create production deployment script | Completed | Implemented deploy-prod.sh with Cloudflare deployment |
+| Create pre-deployment testing script | Completed | Implemented test-before-deploy.sh |
+| Configure environment variables | Completed | Simplified to a single .env file with deployment script integration |
 | Containerize all services | Not Started | - |
 | Set up Kubernetes deployment | Not Started | - |
 | Implement monitoring | Not Started | - |
@@ -73,40 +89,61 @@ Current overall progress: **75%**
 | ID | Issue | Priority | Status | Notes |
 |----|-------|----------|--------|-------|
 | 1 | Discord command registration error | High | Fixed | Required options must be placed before optional options |
-| 2 | JWT_SECRET not properly configured | Medium | Open | Using default development secret |
+| 2 | JWT_SECRET not properly configured | Medium | Fixed | Implemented dedicated environment service to properly load from .env file |
 | 3 | listMeetings function errors | Medium | Mitigated | Added error handling to prevent test failures |
 | 4 | Undefined meeting IDs in mock responses | Low | Open | Can cause issues in subsequent operations |
+| 5 | Environment variables not loading from .env file | High | Fixed | Created dedicated environment service to prioritize .env values |
+| 6 | Discord Activity mobile compatibility | Medium | Open | Need to optimize UI for mobile Discord clients |
+| 7 | Mock endpoints in Discord Activity server | Medium | In Progress | Implementation plan created in code-cleanup-recommendations.md |
+| 8 | Lack of automated deployment process | High | Fixed | Created and implemented deployment scripts |
+| 9 | Inconsistent error handling | Medium | In Progress | Standardization plan in code-cleanup-recommendations.md |
+| 10 | Redundant code and files | Low | In Progress | Cleanup plan in deployment-and-cleanup-plan.md |
+| 11 | Special characters in environment variables | High | Fixed | Implemented safe environment variable loading in deployment scripts |
+| 12 | Discord Activity URL configuration | Medium | Fixed | Updated to prioritize environment variables over configuration |
 
 ## Recent Completions
 
-- Fixed Discord command registration issue with required/optional option ordering
-- Created comprehensive end-to-end testing documentation
-- Created architecture overview and system patterns documentation
-- Implemented error handling for listMeetings function
+- Implemented deployment scripts for both development and production
+- Simplified environment variable management with a single `.env` file
+- Fixed issues with special characters in environment variables
+- Added support for environment variable placeholders in configuration
+- Fixed Discord Activity URL configuration to prioritize environment variables
+- Enhanced configuration service to support environment variable placeholders
+- Created comprehensive deployment and cleanup plan
+- Created pre-deployment testing script
+- Successfully set up and tested the Discord Activity implementation
+- Configured Discord Activity for server ID 1283874310720716890
+- Implemented host-based synchronization for Watch Together feature
+- Created client-side components for Discord Activity (player, sync service, UI)
+- Created server-side endpoints for Discord Activity (token exchange, session generation)
+- Implemented fallback mechanism for servers without Activities API access
 - Created setup and test script for environment setup
-- Added detailed troubleshooting guides for common issues
-- Created status report with current project state
-- Documented next steps for project completion
-- Created quick-start guide for essential setup steps
-- Completed README with setup and usage instructions
+- Successfully tested video search and Discord Activity launch
+- Completed end-to-end testing with actual Discord and Kaltura credentials
+- Updated documentation with Discord Activity implementation details
 
 ## Next Actions
 
-1. Run complete end-to-end test with actual Discord and Kaltura credentials
-2. Fix JWT_SECRET in environment configuration
-3. Address any issues identified during end-to-end testing
-4. Complete API documentation with examples
-5. Add versioning metadata to commands and APIs
-6. Begin implementation of notification service
+1. Replace mock endpoints in Discord Activity server with real API calls
+2. Standardize error handling across the codebase
+3. Configure Cloudflare deployment for both development and production
+4. Enhance user presence features in the Discord Activity
+5. Optimize synchronization for various network conditions
+6. Add analytics for usage tracking
+7. Test Discord Activity on mobile clients
+8. Complete API documentation with examples
+9. Add versioning metadata to commands and APIs
+10. Begin implementation of notification service
+11. Test deployment scripts with real production environment
 
 ## Blockers
 
 | Blocker | Impact | Mitigation Plan |
 |---------|--------|----------------|
-| Need Discord developer account with Activities API access | Blocks embedded experience development | Proceed with link-based approach first |
-| Require Kaltura API credentials | Blocks integration development | Use mock responses initially |
-| Awaiting stakeholder feedback on priorities | May affect development sequence | Focus on core bot functionality first |
-| JWT_SECRET not properly configured | Security risk in production | Update .env file with secure secret |
+| Discord Activity mobile compatibility | May affect user experience on mobile | Optimize UI for mobile and test thoroughly |
+| Need to implement analytics | Blocks usage tracking | Define metrics and implement tracking |
+| Awaiting stakeholder feedback on notification priorities | May affect development sequence | Focus on completing Discord Activity implementation first |
+| Cloudflare account access | Required for production deployment | Request access or use development environment for testing |
 
 ## Architectural Decisions
 
@@ -134,3 +171,22 @@ Current overall progress: **75%**
    - Required options must be placed before optional options
    - Use consistent naming conventions for commands and options
    - Implement permission checks for administrative commands
+
+6. **Discord Activity Implementation**:
+   - Use Discord's embedded-app-sdk for Watch Together feature
+   - Implement host-based synchronization for video playback
+   - Provide fallback mechanism for servers without Activities API access
+   - Use Vite for frontend development of Discord Activity
+   - Implement client-server architecture with Express.js backend
+
+7. **Deployment Strategy**:
+   - Use Cloudflare for hosting the Discord Activity
+   - Implement separate deployment scripts for development and production
+   - Use a single `.env` file with environment-specific variables set at runtime
+   - Implement pre-deployment testing to ensure code quality
+
+8. **Environment Variable Management**:
+   - Use a single `.env` file for both components
+   - Set environment-specific variables in deployment scripts at runtime
+   - Use environment variable placeholders in configuration
+   - Prioritize environment variables over configuration values

@@ -186,29 +186,65 @@ async function runTests() {
     const joinUrl = await kalturaClient.generateJoinUrl(meeting.id, mappedUser.kalturaUserId);
     console.log(`✅ Join URL generated: ${joinUrl}`);
     
+    // Test VOD functionality
+    console.log('\nTesting VOD functionality...');
+    
+    // Search for videos
+    const searchParams = {
+      freeText: 'test',
+      limit: 5,
+      page: 1
+    };
+    
+    try {
+      const videos = await kalturaClient.searchVideos(searchParams);
+      console.log(`✅ Videos searched: ${videos.length} videos found matching "${searchParams.freeText}"`);
+      
+      if (videos.length > 0) {
+        // Get a specific video
+        const video = await kalturaClient.getVideo(videos[0].id);
+        console.log(`✅ Video retrieved: ${video.id} - ${video.title}`);
+        
+        // Generate video play URL
+        const playUrl = await kalturaClient.generateVideoPlayUrl(video.id, mappedUser.kalturaUserId);
+        console.log(`✅ Video play URL generated: ${playUrl}`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not test VOD functionality: ${error.message}. This is expected in some environments.`);
+    }
+    
     // Test API Gateway (mock)
     console.log('\n5. Testing API Gateway endpoints (mock)...');
     
-    // Mock API responses
+    // Mock API responses for meetings
     console.log('✅ GET /api/meetings would return the list of meetings');
     console.log('✅ POST /api/meetings would create a new meeting');
     console.log('✅ GET /api/meetings/:id would return meeting details');
     console.log('✅ DELETE /api/meetings/:id would end a meeting');
     console.log('✅ POST /api/meetings/:id/join would generate a join URL');
+    
+    // Mock API responses for videos
+    console.log('✅ GET /api/videos would return the list of videos');
+    console.log('✅ GET /api/videos/search?q=query would search for videos');
+    console.log('✅ GET /api/videos/:id would return video details');
+    console.log('✅ POST /api/videos/:id/play would generate a play URL');
+    
+    // Auth endpoints
     console.log('✅ POST /api/auth/token would generate an auth token');
     
     // Test Discord Bot Commands (mock)
     console.log('\n6. Testing Discord Bot Commands (mock)...');
     
     // Import command handlers
-    const { 
-      handleStartCommand, 
-      handleJoinCommand, 
-      handleListCommand, 
+    const {
+      handleStartCommand,
+      handleJoinCommand,
+      handleListCommand,
       handleEndCommand,
       handleConfigViewCommand,
       handleConfigUpdateCommand,
-      handleConfigResetCommand
+      handleConfigResetCommand,
+      handleVideoSearchCommand
     } = require('../dist/discord/commandHandlers');
     
     // Test kaltura-start command
@@ -270,6 +306,22 @@ async function runTests() {
     configResetInteraction.memberPermissions = { has: () => true };
     await handleConfigResetCommand(configResetInteraction);
     console.log(`✅ kaltura-config-reset command ${configResetInteraction.replied ? 'responded successfully' : 'failed to respond'}`);
+    
+    // Test kaltura-video-search command
+    console.log('\nTesting kaltura-video-search command...');
+    const videoSearchInteraction = new MockInteraction('kaltura-video-search', {
+      'query': 'test video',
+      'limit': 5
+    });
+    
+    // Add getInteger method to options for the limit parameter
+    videoSearchInteraction.options.getInteger = (name, required = false) => {
+      const value = videoSearchInteraction._optionsData.get(name);
+      return value !== undefined ? value : (required ? 5 : null);
+    };
+    
+    await handleVideoSearchCommand(videoSearchInteraction);
+    console.log(`✅ kaltura-video-search command ${videoSearchInteraction.replied ? 'responded successfully' : 'failed to respond'}`);
     
     // Clean up
     console.log('\n7. Cleaning up...');

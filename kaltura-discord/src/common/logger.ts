@@ -1,4 +1,5 @@
 import winston from 'winston';
+import { getEnv } from './envService';
 
 /**
  * Custom format to properly serialize error objects
@@ -23,7 +24,7 @@ const errorSerializer = winston.format((info) => {
  * Configure the logger with appropriate log levels and formats
  */
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: getEnv('LOG_LEVEL', 'info'),
   format: winston.format.combine(
     errorSerializer(),
     winston.format.timestamp(),
@@ -52,7 +53,7 @@ export const logger = winston.createLogger({
 });
 
 // If we're not in production, also log to the console with simpler formatting
-if (process.env.NODE_ENV !== 'production') {
+if (getEnv('NODE_ENV', 'development') !== 'production') {
   logger.add(
     new winston.transports.Console({
       format: winston.format.simple(),

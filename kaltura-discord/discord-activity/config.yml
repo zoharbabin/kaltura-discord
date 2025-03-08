@@ -1,0 +1,7 @@
+tunnel: 292ce3f5-509b-43fe-a267-c8c4cd57da07
+credentials-file: /Users/ZoharBabinM3/.cloudflared/292ce3f5-509b-43fe-a267-c8c4cd57da07.json
+
+ingress:
+  - hostname: discord-dev.zoharbabin.com
+    service: http://localhost:3001
+  - service: http_status:404

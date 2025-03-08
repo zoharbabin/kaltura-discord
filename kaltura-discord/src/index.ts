@@ -1,11 +1,10 @@
-import dotenv from 'dotenv';
 import { startBot } from './discord/bot';
 import { startApiGateway } from './services/apiGateway';
 import { logger } from './common/logger';
 import { configService } from './services/configService';
 
-// Load environment variables
-dotenv.config();
+// Import environment service (must be imported before other modules that use it)
+import './common/envService';
 
 /**
  * Main application entry point

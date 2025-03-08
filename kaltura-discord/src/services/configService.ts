@@ -33,7 +33,20 @@ export interface ServerConfig {
     };
   };
   features: {
-    [feature: string]: boolean; // Feature flags
+    [feature: string]: boolean | string; // Feature flags and configuration values
+  };
+  kaltura?: {
+    session?: {
+      privileges?: {
+        default?: string;
+        video?: string;
+        meeting?: string;
+        [key: string]: string | undefined;
+      };
+    };
+    video?: {
+      embedBaseUrl?: string;
+    };
   };
 }
 
@@ -127,6 +140,9 @@ export class ConfigService {
     // Create a deep copy of the default config
     const merged = JSON.parse(JSON.stringify(defaultConfig));
     
+    // Replace placeholders with environment variables
+    this.replaceEnvPlaceholders(merged);
+    
     // Merge notifications
     if (serverConfig.notifications) {
       if (serverConfig.notifications.enabled !== undefined) {
@@ -194,6 +210,45 @@ export class ConfigService {
         ...merged.features,
         ...serverConfig.features
       };
+    }
+    
+    // Merge Kaltura settings
+    if (serverConfig.kaltura) {
+      if (!merged.kaltura) {
+        merged.kaltura = {};
+      }
+      
+      // Merge session settings
+      if (serverConfig.kaltura.session) {
+        if (!merged.kaltura.session) {
+          merged.kaltura.session = {};
+        }
+        
+        // Merge session privileges
+        if (serverConfig.kaltura.session.privileges) {
+          if (!merged.kaltura.session.privileges) {
+            merged.kaltura.session.privileges = {};
+          }
+          
+          merged.kaltura.session.privileges = {
+            ...merged.kaltura.session.privileges,
+            ...serverConfig.kaltura.session.privileges
+          };
+        }
+      }
+      
+      // Merge video settings
+      if (serverConfig.kaltura.video) {
+        if (!merged.kaltura.video) {
+          merged.kaltura.video = {};
+        }
+        
+        // Merge video settings
+        merged.kaltura.video = {
+          ...merged.kaltura.video,
+          ...serverConfig.kaltura.video
+        };
+      }
     }
     
     return merged;
@@ -320,6 +375,33 @@ export class ConfigService {
       logger.error('Failed to reset server configuration', { error, serverId });
       throw new Error('Failed to reset server configuration');
     }
+  }
+  
+  /**
+   * Replace placeholders in the configuration with environment variables.
+   * Placeholders are in the format {{ENV_VAR_NAME}}.
+   * @param obj - Object to process
+   */
+  private replaceEnvPlaceholders(obj: any): void {
+    if (!obj || typeof obj !== 'object') return;
+    
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+      
+      if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+        // Extract environment variable name
+        const envVarName = value.substring(2, value.length - 2);
+        // Replace with environment variable value or keep original if not found
+        const envValue = process.env[envVarName];
+        if (envValue !== undefined) {
+          obj[key] = envValue;
+          logger.debug(`Replaced placeholder ${value} with environment variable`, { key, envVarName });
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        // Recursively process nested objects
+        this.replaceEnvPlaceholders(value);
+      }
+    });
   }
   
   /**

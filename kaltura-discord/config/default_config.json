@@ -23,13 +23,14 @@
     "enabled": true,
     "prefix": "",
     "permissions": {
-      "kaltura-start": ["@everyone"],
-      "kaltura-join": ["@everyone"],
-      "kaltura-list": ["@everyone"],
-      "kaltura-end": ["@everyone"],
+      "kaltura-start": ["admin"],
+      "kaltura-join": ["admin"],
+      "kaltura-list": ["admin"],
+      "kaltura-end": ["admin"],
       "kaltura-config-view": ["admin"],
       "kaltura-config-update": ["admin"],
-      "kaltura-config-reset": ["admin"]
+      "kaltura-config-reset": ["admin"],
+      "kaltura-video-search": ["@everyone"]
     }
   },
   "roles": {
@@ -42,6 +43,21 @@
   "features": {
     "embedding": true,
     "recording": true,
-    "user_sync": true
+    "user_sync": true,
+    "activitiesApi": false,
+    "discordApplicationId": "",
+    "discordActivityUrl": "{{DISCORD_ACTIVITY_URL}}"
+  },
+  "kaltura": {
+    "session": {
+      "privileges": {
+        "default": "",
+        "video": "genieid:default,privacycontext:2361952EPea2653e,virtualeventid:2361952,searchcontext:2361952EPea2653e,eventsessioncontextid:*,appid:eventplatform-hackerspacelive.events.kaltura.com",
+        "meeting": "virtualeventid:2361952,eventsessioncontextid:*,appid:*"
+      }
+    },
+    "video": {
+      "embedBaseUrl": "https://hackerspacelive.events.kaltura.com/media/t/"
+    }
   }
 }

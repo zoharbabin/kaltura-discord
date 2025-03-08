@@ -2,6 +2,7 @@ import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { logger } from '../common/logger';
 import { KalturaSession, kalturaClient } from './kalturaClient';
 import { configService } from './configService';
+import { getEnv } from '../common/envService';
 
 /**
  * Interface for Discord user data
@@ -44,8 +45,8 @@ export class UserAuthService {
    * Create a new User Authentication Service
    */
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'default_jwt_secret_for_development';
-    this.jwtExpiry = process.env.JWT_EXPIRY || '1h';
+    this.jwtSecret = getEnv('JWT_SECRET', 'default_jwt_secret_for_development');
+    this.jwtExpiry = getEnv('JWT_EXPIRY', '1h');
     
     if (this.jwtSecret === 'default_jwt_secret_for_development') {
       logger.warn('Using default JWT secret for development. This is not secure for production.');

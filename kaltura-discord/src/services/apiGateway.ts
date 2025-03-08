@@ -4,10 +4,11 @@ import morgan from 'morgan';
 import { kalturaClient, MeetingCreateParams } from './kalturaClient';
 import { userAuthService } from './userAuthService';
 import jwt from 'jsonwebtoken';
+import { getEnv } from '../common/envService';
 
 // Create Express application
 const app = express();
-const port = process.env.API_PORT || 3000;
+const port = getEnv('API_PORT', '3000');
 
 // CORS middleware function
 const corsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
@@ -60,8 +61,8 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction): void =
 export async function startApiGateway(): Promise<void> {
   try {
     // Check if we have Kaltura credentials
-    const partnerId = process.env.KALTURA_PARTNER_ID;
-    const adminSecret = process.env.KALTURA_ADMIN_SECRET;
+    const partnerId = getEnv('KALTURA_PARTNER_ID');
+    const adminSecret = getEnv('KALTURA_ADMIN_SECRET');
     
     if (!partnerId || !adminSecret || partnerId === 'your_kaltura_partner_id' || adminSecret === 'your_kaltura_admin_secret') {
       logger.warn('Using development mode: Kaltura API integration will use mock responses');
