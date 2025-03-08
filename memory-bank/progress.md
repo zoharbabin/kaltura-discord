@@ -2,7 +2,7 @@
 
 ## Project Status: Late Implementation Phase
 
-Current overall progress: **90%**
+Current overall progress: **92%**
 
 ## Milestone Overview
 
@@ -11,7 +11,7 @@ Current overall progress: **90%**
 | **1** | Discord Bot Integration (MVP) | In Progress | 95% | TBD |
 | **2** | Enhanced Notifications & User Sync | In Progress | 15% | TBD |
 | **3** | Embedded Activity Experience | In Progress | 85% | TBD |
-| **4** | Production Scaling & Monitoring | In Progress | 40% | TBD |
+| **4** | Production Scaling & Monitoring | In Progress | 45% | TBD |
 
 ## Phase 1: Discord Bot Integration (MVP)
 
@@ -60,6 +60,13 @@ Current overall progress: **90%**
 | Create user interface | Completed | Implemented Discord-themed UI with playback controls |
 | Test across different clients | In Progress | Initial testing successful, need to test on mobile |
 | Document embedded experience | Completed | Updated documentation with implementation details |
+| Analyze alignment with official documentation | Completed | Created discord-activity-alignment.md with findings |
+| Create implementation update plan | Completed | Detailed plan in discord-activity-implementation-update-plan.md |
+| Update SDK initialization and usage | Not Started | Need to implement latest SDK patterns |
+| Update authentication flow | Not Started | Need to align with recommended authentication flow |
+| Implement SDK-based participant management | Not Started | Replace custom tracking with SDK methods |
+| Implement event subscriptions | Not Started | Add proper event handling for layout and orientation |
+| Optimize for mobile and different layouts | Not Started | Enhance UI responsiveness for different modes |
 | Replace mock endpoints with real API calls | In Progress | Created implementation plan in code-cleanup-recommendations.md |
 | Enhance user presence features | Not Started | Basic implementation in place, needs enhancement |
 | Optimize for different network conditions | Not Started | Basic synchronization working, needs optimization |
@@ -76,6 +83,9 @@ Current overall progress: **90%**
 | Create production deployment script | Completed | Implemented deploy-prod.sh with Cloudflare deployment |
 | Create pre-deployment testing script | Completed | Implemented test-before-deploy.sh |
 | Configure environment variables | Completed | Simplified to a single .env file with deployment script integration |
+| Identify and document redundant files | Completed | Created cleanup-plan.md with detailed analysis |
+| Create cleanup script | Completed | Created cleanup-script.md with implementation details |
+| Document project cleanup process | Completed | Created project-cleanup-summary.md with findings and recommendations |
 | Containerize all services | Not Started | - |
 | Set up Kubernetes deployment | Not Started | - |
 | Implement monitoring | Not Started | - |
@@ -97,12 +107,19 @@ Current overall progress: **90%**
 | 7 | Mock endpoints in Discord Activity server | Medium | In Progress | Implementation plan created in code-cleanup-recommendations.md |
 | 8 | Lack of automated deployment process | High | Fixed | Created and implemented deployment scripts |
 | 9 | Inconsistent error handling | Medium | In Progress | Standardization plan in code-cleanup-recommendations.md |
-| 10 | Redundant code and files | Low | In Progress | Cleanup plan in deployment-and-cleanup-plan.md |
+| 10 | Redundant code and files | Low | Addressed | Created cleanup plan and script in cleanup-plan.md and cleanup-script.md |
 | 11 | Special characters in environment variables | High | Fixed | Implemented safe environment variable loading in deployment scripts |
 | 12 | Discord Activity URL configuration | Medium | Fixed | Updated to prioritize environment variables over configuration |
+| 13 | Discord Activity SDK alignment | High | Open | Current implementation needs to be updated to align with official documentation |
+| 14 | Participant management in Discord Activity | Medium | Open | Need to use SDK-provided methods instead of custom tracking |
+| 15 | Layout and orientation handling | Medium | Open | Need to implement proper event subscriptions for different layouts |
+| 16 | Synchronization accuracy | Medium | Open | Need to enhance synchronization with network condition considerations |
 
 ## Recent Completions
 
+- Identified redundant files and created comprehensive cleanup plan
+- Created cleanup script to automate the removal of redundant files
+- Documented project cleanup process with findings and recommendations
 - Implemented deployment scripts for both development and production
 - Simplified environment variable management with a single `.env` file
 - Fixed issues with special characters in environment variables
@@ -121,25 +138,38 @@ Current overall progress: **90%**
 - Successfully tested video search and Discord Activity launch
 - Completed end-to-end testing with actual Discord and Kaltura credentials
 - Updated documentation with Discord Activity implementation details
+- Analyzed current Discord Activity implementation against official documentation
+- Created detailed alignment analysis in discord-activity-alignment.md
+- Developed comprehensive implementation update plan in discord-activity-implementation-update-plan.md
+- Created summary of required changes in discord-activity-update-summary.md
+- Updated project context with Discord Activity alignment findings
 
 ## Next Actions
 
-1. Replace mock endpoints in Discord Activity server with real API calls
-2. Standardize error handling across the codebase
-3. Configure Cloudflare deployment for both development and production
-4. Enhance user presence features in the Discord Activity
-5. Optimize synchronization for various network conditions
-6. Add analytics for usage tracking
-7. Test Discord Activity on mobile clients
-8. Complete API documentation with examples
-9. Add versioning metadata to commands and APIs
-10. Begin implementation of notification service
-11. Test deployment scripts with real production environment
+1. Execute the cleanup plan to remove redundant files
+2. Update Discord Activity implementation to align with official documentation
+3. Implement proper SDK initialization and event handling
+4. Update authentication flow to match recommended pattern
+5. Replace custom participant tracking with SDK methods
+6. Implement event subscriptions for layout and orientation changes
+7. Optimize UI for different layout modes and mobile devices
+8. Replace mock endpoints in Discord Activity server with real API calls
+9. Enhance synchronization with network condition considerations
+10. Implement comprehensive error handling and fallback mechanisms
+11. Add analytics for usage tracking
+12. Test Discord Activity across different Discord clients
+13. Configure Cloudflare deployment for both development and production
+14. Standardize error handling across the codebase
+15. Complete API documentation with examples
+16. Add versioning metadata to commands and APIs
+17. Test deployment scripts with real production environment
+18. Begin implementation of notification service
 
 ## Blockers
 
 | Blocker | Impact | Mitigation Plan |
 |---------|--------|----------------|
+| Discord Activity SDK alignment | High priority for compatibility | Implement the update plan in phases, starting with SDK initialization |
 | Discord Activity mobile compatibility | May affect user experience on mobile | Optimize UI for mobile and test thoroughly |
 | Need to implement analytics | Blocks usage tracking | Define metrics and implement tracking |
 | Awaiting stakeholder feedback on notification priorities | May affect development sequence | Focus on completing Discord Activity implementation first |
@@ -174,7 +204,13 @@ Current overall progress: **90%**
 
 6. **Discord Activity Implementation**:
    - Use Discord's embedded-app-sdk for Watch Together feature
+   - Update implementation to align with official Discord Activity documentation
+   - Use SDK-provided methods for participant management
+   - Implement proper event subscriptions for layout and orientation changes
+   - Optimize UI for different layout modes and mobile devices
    - Implement host-based synchronization for video playback
+   - Enhance synchronization with network condition considerations
+   - Implement comprehensive error handling and fallback mechanisms
    - Provide fallback mechanism for servers without Activities API access
    - Use Vite for frontend development of Discord Activity
    - Implement client-server architecture with Express.js backend
@@ -190,3 +226,10 @@ Current overall progress: **90%**
    - Set environment-specific variables in deployment scripts at runtime
    - Use environment variable placeholders in configuration
    - Prioritize environment variables over configuration values
+
+9. **Project Cleanup Strategy**:
+   - Identify and remove redundant environment variable management scripts
+   - Remove redundant environment variable files
+   - Optionally clean generated files that can be regenerated
+   - Maintain a single source of truth for environment variables
+   - Document the cleanup process for future reference

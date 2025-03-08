@@ -150,7 +150,6 @@ async function handleButtonInteraction(interaction: ButtonInteraction): Promise<
     await launchKalturaVideoActivity(interaction, videoId);
     return;
   }
-  
   // Handle Discord Activity button
   if (customId.startsWith('discord_activity_')) {
     const videoId = customId.replace('discord_activity_', '');
@@ -158,26 +157,32 @@ async function handleButtonInteraction(interaction: ButtonInteraction): Promise<
     return;
   }
 
-  // Handle Watch Together button
-  if (customId.startsWith('watch_together_')) {
-    const videoId = customId.replace('watch_together_', '');
-    await handleWatchTogether(interaction, videoId);
+  // Handle Join Activity button
+  if (customId.startsWith('join_activity_')) {
+    const videoId = customId.replace('join_activity_', '');
+    await handleJoinActivity(interaction, videoId);
     return;
   }
+// Handle Watch Together button
+if (customId.startsWith('watch_together_')) {
+  const videoId = customId.replace('watch_together_', '');
+  await handleWatchTogether(interaction, videoId);
+  return;
+}
+
+// Handle video details button
+if (customId.startsWith('inline_activity_')) {
+  const videoId = customId.replace('inline_activity_', '');
+  await handleInlineActivity(interaction, videoId);
+  return;
+}
   
-  // Handle video details button
-  if (customId.startsWith('inline_activity_')) {
-    const videoId = customId.replace('inline_activity_', '');
-    await handleInlineActivity(interaction, videoId);
-    return;
-  }
-  
-  // Unknown button
-  logger.warn(`Unknown button customId: ${customId}`);
-  await interaction.reply({
-    content: 'This button is not yet implemented or is no longer valid.',
-    ephemeral: true
-  });
+// Unknown button
+logger.warn(`Unknown button customId: ${customId}`);
+await interaction.reply({
+  content: 'This button is not yet implemented or is no longer valid.',
+  ephemeral: true
+});
 }
 
 /**
@@ -669,6 +674,127 @@ async function handleSearchAgain(interaction: ButtonInteraction): Promise<void> 
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({
         content: 'Failed to process your request. Please try using the `/kaltura-video-search` command directly.',
+        ephemeral: true
+      });
+    }
+  }
+}
+
+/**
+ * Handle Join Activity button click
+ * Directly launches the Discord activity in the voice channel
+ */
+async function handleJoinActivity(interaction: ButtonInteraction, videoId: string): Promise<void> {
+  try {
+    // Defer reply to give us time to process
+    await interaction.deferReply({ ephemeral: false });
+    
+    // Check if the user is in a voice channel
+    if (!(interaction.member instanceof GuildMember) || !interaction.member.voice.channel) {
+      await interaction.editReply({
+        content: 'You need to be in a voice channel to join the Watch Together activity!'
+      });
+      return;
+    }
+    
+    // Get the voice channel
+    const voiceChannel = interaction.member.voice.channel;
+    
+    // Get the video details
+    const video = await kalturaClient.getVideo(videoId);
+    
+    // Extract partner ID from the video play URL
+    const partnerIdMatch = video.playUrl.match(/\/p\/(\d+)\//);
+    const partnerId = partnerIdMatch ? partnerIdMatch[1] : '';
+    
+    // Get the uiConfID from environment variable
+    const uiconfId = getEnv('KALTURA_PLAYER_ID', '46022343');
+    
+    // Get server ID for server-specific configuration
+    const serverId = interaction.guildId || 'default';
+    
+    // Get server-specific configuration
+    const config = await configService.getServerConfig(serverId);
+    
+    // Get Discord application ID from configuration
+    const applicationId = config.features?.discordApplicationId ||
+                         getEnv('DISCORD_APPLICATION_ID', '');
+    
+    if (!applicationId) {
+      logger.error('Discord application ID not configured', { serverId });
+      await interaction.editReply({
+        content: 'Discord Activity is not properly configured. Please contact the administrator.'
+      });
+      return;
+    }
+    
+    // Create metadata for the activity
+    const metadata = {
+      videoId,
+      partnerId,
+      uiconfId,
+      title: video.title,
+      creatorId: interaction.user.id
+    };
+    
+    // Get the Discord Activity base URL from environment variable first, then fall back to configuration
+    const activityBaseUrl = getEnv('DISCORD_ACTIVITY_URL', '') ||
+                           config.features?.discordActivityUrl as string ||
+                           'https://discord.com/activities';
+    
+    // Create the Discord Activity URL
+    const activityUrl = `${activityBaseUrl}/${applicationId}?metadata=${encodeURIComponent(JSON.stringify(metadata))}`;
+    
+    try {
+      // For Discord Activities, we need to provide a button that links to the activity
+      // Discord will handle launching the activity in the client when clicked
+      
+      await interaction.editReply({
+        content: `${interaction.user} is joining the Watch Together activity for **${video.title}**!\n\nClick the button below to launch the activity:`,
+        components: [{
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            style: 5, // Link
+            label: '🎬 Launch Watch Together Activity',
+            // Use the standard HTTPS URL for the activity
+            url: activityUrl
+          }]
+        }]
+      });
+      
+      logger.info('User joining Discord Activity', {
+        user: interaction.user.tag,
+        videoId,
+        voiceChannel: voiceChannel.name
+      });
+    } catch (error) {
+      logger.error('Error launching Discord Activity directly', { error, videoId });
+      
+      // Fallback to the standard URL
+      await interaction.editReply({
+        content: 'Unable to launch the activity. Please use this link:',
+        components: [{
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            style: 5, // Link
+            label: '🎬 Launch Watch Together Activity',
+            url: activityUrl
+          }]
+        }]
+      });
+    }
+  } catch (error) {
+    logger.error('Error handling Join Activity button', { error, videoId });
+    
+    if (interaction.deferred) {
+      await interaction.editReply({
+        content: 'Failed to join the activity. Please try again later.'
+      });
+    } else {
+      await interaction.reply({
+        content: 'Failed to join the activity. Please try again later.',
         ephemeral: true
       });
     }

@@ -61,6 +61,16 @@ For consistent and reliable deployments:
 - Cloudflare Workers for production deployment
 - Automated verification of deployment success
 
+### Project Cleanup Pattern
+For maintaining a clean and efficient codebase:
+- Regular identification of redundant files and code
+- Comprehensive cleanup planning before execution
+- Automated cleanup scripts with proper backups
+- Documentation of cleanup decisions and rationale
+- Verification of functionality after cleanup
+- Single source of truth for configuration and environment variables
+- Removal of duplicate or obsolete implementation approaches
+
 ## Component Relationships
 
 ```
@@ -119,9 +129,12 @@ For consistent and reliable deployments:
 1. User clicks "Watch Together" button in Discord
 2. Discord Bot generates activity URL with metadata
 3. User joins voice channel and launches activity
-4. Discord Activity client loads with video metadata
-5. Host controls synchronize playback across all users
-6. Events are shared in real-time between participants
+4. Discord Activity client initializes SDK and authenticates
+5. Activity retrieves metadata and initializes player
+6. SDK event subscriptions set up for layout and participants
+7. Host controls synchronize playback across all users
+8. Events are shared in real-time between participants
+9. Activity adapts to different layout modes and orientations
 
 ## Security Patterns
 
@@ -192,6 +205,50 @@ For consistent and reliable deployments:
 - Command compatibility layer
 - Graceful handling of deprecated commands
 
+## Discord Activity Patterns
+
+### SDK Integration Pattern
+- Use Discord's embedded-app-sdk for communication with Discord
+- Follow the recommended SDK initialization pattern
+- Implement proper error handling for SDK operations
+- Use SDK-provided methods for participant management
+- Subscribe to SDK events for layout and orientation changes
+
+### Authentication Pattern
+- Use the recommended OAuth2 flow for authorization
+- Exchange authorization code for token via server-side endpoint
+- Authenticate with Discord client using the token
+- Secure token exchange with proper CSP compliance
+- Store tokens securely and handle expiration
+
+### Participant Management Pattern
+- Use SDK's getInstanceConnectedParticipants for participant tracking
+- Subscribe to ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE events
+- Implement host selection and transfer logic
+- Handle participant join/leave events
+- Update UI to reflect participant status
+
+### Layout Adaptation Pattern
+- Subscribe to ACTIVITY_LAYOUT_MODE_UPDATE events
+- Handle different layout modes (focused, PIP, grid)
+- Subscribe to ORIENTATION_UPDATE events
+- Optimize UI for different orientations (portrait, landscape)
+- Set orientation lock for mobile devices when appropriate
+
+### Synchronization Pattern
+- Implement host-based synchronization for video playback
+- Consider network conditions in synchronization logic
+- Use adaptive sync intervals based on network quality
+- Implement dynamic tolerance for synchronization
+- Provide visual feedback during synchronization
+
+### Error Handling Pattern
+- Implement comprehensive error handling for SDK operations
+- Provide user-friendly error messages
+- Create fallback mechanisms for unsupported features
+- Implement graceful degradation for error scenarios
+- Log errors for debugging and analytics
+
 ## Development Patterns
 
 ### API-First Design
@@ -218,3 +275,12 @@ For consistent and reliable deployments:
 - Safe handling of special characters in environment variables
 - Symbolic link for shared environment file between components
 - Environment variable placeholders in configuration
+
+### Code Cleanup and Maintenance
+- Regular identification of redundant files and code
+- Comprehensive planning before cleanup execution
+- Automated cleanup scripts with proper backups
+- Documentation of cleanup decisions and rationale
+- Verification of functionality after cleanup
+- Removal of duplicate or obsolete implementation approaches
+- Standardization of error handling and logging patterns

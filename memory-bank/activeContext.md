@@ -2,20 +2,23 @@
 
 ## Current Focus
 
-We have completed the late-implementation phase of the Kaltura-Discord integration project and are now focusing on finalizing the Discord Activity implementation, improving deployment processes, and preparing for the next development cycle. Our current focus areas are:
+We have completed the late-implementation phase of the Kaltura-Discord integration project and are now focusing on updating the Discord Activity implementation to align with official documentation, improving deployment processes, cleaning up redundant files, and preparing for the next development cycle. Our current focus areas are:
 
-1. Completing the Discord Activity implementation for Watch Together feature (Phase 3)
+1. Updating the Discord Activity implementation to align with official Discord documentation (Phase 3)
 2. Streamlining deployment processes for both development and production
 3. Simplifying environment variable management
-4. Finalizing end-to-end testing of the Discord Bot Integration MVP (Phase 1)
-5. Preparing for Phase 2: Enhanced Notifications & User Sync
+4. Cleaning up redundant files and code
+5. Finalizing end-to-end testing of the Discord Bot Integration MVP (Phase 1)
+6. Preparing for Phase 2: Enhanced Notifications & User Sync
 
 ## Current Priorities
 
 1. **Discord Activity Implementation**:
-   - Complete the client-side implementation with real-time synchronization
+   - Update the implementation to align with official Discord Activity documentation
+   - Implement proper SDK initialization and event handling
+   - Enhance participant management and synchronization
+   - Optimize for different layout modes and mobile devices
    - Replace mock endpoints with real Kaltura API calls
-   - Enhance user presence and interaction features
    - Test across different Discord clients and network conditions
 
 2. **Deployment Process Improvements**:
@@ -30,13 +33,19 @@ We have completed the late-implementation phase of the Kaltura-Discord integrati
    - Added support for environment-specific variables in deployment scripts
    - Enhanced configuration service to support environment variable placeholders
 
-4. **End-to-End Testing**:
+4. **Project Cleanup**:
+   - Identified redundant files and created comprehensive cleanup plan
+   - Created cleanup script to automate the removal of redundant files
+   - Documented project cleanup process with findings and recommendations
+   - Addressed redundant environment variable management scripts and files
+
+5. **End-to-End Testing**:
    - Completed successful end-to-end test with actual Discord and Kaltura credentials
    - Verified Discord bot commands functionality with actual Discord server
    - Tested API Gateway endpoints with actual requests
    - Verified Kaltura API integration with both mock and real responses
 
-5. **Issue Resolution**:
+6. **Issue Resolution**:
    - Fixed JWT_SECRET environment variable configuration
    - Enhanced error handling in mock responses
    - Fixed Discord Activity URL configuration to prioritize environment variables
@@ -45,6 +54,9 @@ We have completed the late-implementation phase of the Kaltura-Discord integrati
 
 ## Recent Changes
 
+- Identified redundant files and created comprehensive cleanup plan
+- Created cleanup script to automate the removal of redundant files
+- Documented project cleanup process with findings and recommendations
 - Implemented deployment scripts for both development and production
 - Simplified environment variable management with a single `.env` file
 - Fixed issues with special characters in environment variables
@@ -59,13 +71,20 @@ We have completed the late-implementation phase of the Kaltura-Discord integrati
 - Implemented fallback mechanism for servers without Activities API access
 - Created setup and test script for environment setup
 - Successfully tested video search and Discord Activity launch
+- Analyzed current Discord Activity implementation against official documentation
+- Created detailed implementation plan for updating Discord Activity
+- Identified key areas for improvement in SDK usage, authentication, and synchronization
 
 ## Next Steps
 
 1. **Immediate Actions**:
-   - Complete the Discord Activity implementation by replacing mock endpoints with real API calls
-   - Enhance user presence features in the Discord Activity
-   - Optimize synchronization for various network conditions
+   - Execute the cleanup plan to remove redundant files
+   - Update Discord Activity implementation to align with official documentation
+   - Implement proper SDK initialization and event handling
+   - Enhance participant management using SDK methods
+   - Optimize UI for different layout modes and mobile devices
+   - Replace mock endpoints with real Kaltura API calls
+   - Improve synchronization with network condition considerations
    - Add analytics for usage tracking
    - Test deployment scripts with real production environment
 
@@ -98,6 +117,17 @@ We have completed the late-implementation phase of the Kaltura-Discord integrati
 - Set environment-specific variables in deployment scripts at runtime
 - Use environment variable placeholders in configuration
 - Prioritize environment variables over configuration values
+- Update Discord Activity implementation to align with official documentation
+- Use SDK-provided methods for participant management instead of custom tracking
+- Implement proper event subscriptions for layout and orientation changes
+- Optimize UI for different layout modes and mobile devices
+- Enhance synchronization with network condition considerations
+- Implement comprehensive error handling and fallback mechanisms
+- Add analytics for tracking usage and performance metrics
+- Identify and remove redundant environment variable management scripts
+- Remove redundant environment variable files
+- Maintain a single source of truth for environment variables
+- Document the cleanup process for future reference
 
 ## Open Questions
 

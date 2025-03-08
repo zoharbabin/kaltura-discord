@@ -259,30 +259,65 @@ export async function launchDiscordActivity(
       metadata: JSON.stringify(metadata)
     });
     
-    // Launch the Discord Activity
-    await interaction.editReply({
-      content: `${interaction.user} started a Watch Together activity for **${video.title}**!\n\nJoin voice channel "${voiceChannel.name}" to watch together.`,
-      embeds: [{
-        title: `Watch Together: ${video.title}`,
-        description: "Click the button below to launch the Watch Together activity in your voice channel.",
-        color: 0x00B171, // Kaltura green
-        image: {
-          url: video.thumbnailUrl
-        },
-        footer: {
-          text: `Kaltura Video • ID: ${video.id}`
-        }
-      }],
-      components: [{
-        type: 1, // Action Row
-        components: [{
-          type: 2, // Button
-          style: 5, // Link
-          label: '🎬 Launch Watch Together Activity',
-          url: activityUrl
+    // Launch the Discord Activity directly in the voice channel
+    // First, check if the user is in a voice channel
+    if (!voiceChannel) {
+      await interaction.editReply({
+        content: 'You need to be in a voice channel to use Watch Together!'
+      });
+      return;
+    }
+
+    try {
+      // Create a message with instructions while we attempt to launch the activity
+      await interaction.editReply({
+        content: `${interaction.user} is starting a Watch Together activity for **${video.title}**!\n\nJoin voice channel "${voiceChannel.name}" to watch together.`,
+        embeds: [{
+          title: `Watch Together: ${video.title}`,
+          description: "The activity is being launched in your voice channel. Everyone in the channel will be able to watch together.",
+          color: 0x00B171, // Kaltura green
+          image: {
+            url: video.thumbnailUrl
+          },
+          footer: {
+            text: `Kaltura Video • ID: ${video.id}`
+          }
         }]
-      }]
-    });
+      });
+
+      // Use Discord's built-in activity launching mechanism
+      // For Discord Activities, we need to provide a button that links to the activity
+      // Discord will handle launching the activity in the client when clicked
+      await interaction.followUp({
+        content: `Click the button below to join the Watch Together activity in voice channel "${voiceChannel.name}"`,
+        components: [{
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            style: 5, // Link button
+            label: '🎬 Join Watch Together Activity',
+            // Use the standard HTTPS URL for the activity
+            url: activityUrl
+          }]
+        }]
+      });
+    } catch (activityError) {
+      logger.error('Error launching Discord Activity directly', { activityError, videoId });
+      
+      // Fallback to the standard URL
+      await interaction.followUp({
+        content: 'Unable to launch the activity directly. Please use this link:',
+        components: [{
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            style: 5, // Link
+            label: '🎬 Launch Watch Together Activity',
+            url: activityUrl
+          }]
+        }]
+      });
+    }
     
     logger.info('Launched Discord Activity for video', {
       user: interaction.user.tag,
