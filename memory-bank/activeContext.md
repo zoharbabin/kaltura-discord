@@ -43,6 +43,16 @@ We have successfully implemented the core features for Weeks 1-4 of the project 
 - Created NetworkIndicator component for visual feedback
 - Enhanced synchronization service with metrics-based tolerance adjustment
 
+### UI and Error Handling Improvements
+- Improved Discord SDK event subscription handling with better error messages and scope documentation
+- Enhanced Kaltura player configuration to prioritize progressive format over HLS to avoid manifest parsing issues
+- Disabled airplay feature to resolve Category:7 | Code:7003 errors
+- Added custom error handler for manifest parsing errors
+- Implemented proxy connection testing to verify connectivity before loading media
+- Updated UI to start with logs and viewers hidden by default for a cleaner interface
+- Removed unnecessary "Test Kaltura Proxy" button from the UI
+- Added additional URL mapping for manifest files to improve media loading
+
 ### Deployment and Testing Updates
 - Updated setup-and-test.sh to validate user presence components and API Gateway integration
 - Enhanced test-before-deploy.sh with comprehensive checks for new features

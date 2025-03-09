@@ -101,7 +101,7 @@ export async function launchKalturaVideoActivity(
         type: 2, // Button
         style: 5, // Link style
         label: '▶️ Watch Video',
-        url: iframeUrl // Direct users to the Kaltura SPA
+        url: `https://hackerspacelive.events.kaltura.com/media/t/${video.id}`
       },
       {
         type: 2, // Button

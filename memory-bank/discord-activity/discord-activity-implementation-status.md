@@ -6,7 +6,7 @@ This document provides a comprehensive overview of the current state of the Disc
 
 ## Current Status
 
-The Discord Activity implementation is currently in the late stages of development, with approximately 75% of the planned functionality completed. The core components have been implemented and tested successfully, with the remaining work focused on replacing mock endpoints with real API calls, enhancing user presence features, optimizing for mobile clients, and adding analytics for usage tracking.
+The Discord Activity implementation is currently in the late stages of development, with approximately 80% of the planned functionality completed. The core components have been implemented and tested successfully, with significant improvements to error handling, UI, and media playback reliability. Recent updates have focused on resolving WARN and ERROR messages in the logs, improving the user interface, and enhancing the Kaltura player configuration for better reliability in proxied environments. The remaining work is focused on replacing mock endpoints with real API calls, further enhancing user presence features, optimizing for mobile clients, and adding analytics for usage tracking.
 
 ## Completed Components
 
@@ -20,11 +20,18 @@ The Discord Activity implementation is currently in the late stages of developme
    - Implemented authentication flow with OAuth2
    - Set up message passing for synchronization
    - Integrated with Discord's voice channel information
+   - Improved Discord SDK event subscription handling with better error messages
+   - Added proper scope documentation for Discord SDK events
+   - Enhanced error handling for Discord SDK authentication and event subscriptions
 
 3. **Kaltura Player Integration**
    - Created custom wrapper around Kaltura Player SDK
    - Implemented playback controls (play, pause, seek)
    - Added event handling for player state changes
+   - Enhanced Kaltura player configuration to prioritize progressive format over HLS
+   - Disabled airplay feature to resolve Category:7 | Code:7003 errors
+   - Added custom error handler for manifest parsing errors
+   - Implemented proxy connection testing to verify connectivity before loading media
 
 4. **Synchronization Mechanism**
    - Implemented host-based synchronization
@@ -35,6 +42,8 @@ The Discord Activity implementation is currently in the late stages of developme
    - Designed Discord-themed UI with playback controls
    - Implemented loading and error states
    - Added basic user presence display
+   - Updated UI to start with logs and viewers hidden by default for a cleaner interface
+   - Removed unnecessary "Test Kaltura Proxy" button from the UI
 
 ### Server-Side Implementation
 
@@ -100,8 +109,10 @@ The Discord Activity implementation is currently in the late stages of developme
    - These need to be replaced with real API calls before production deployment
 
 2. **Error Handling**
-   - Basic error handling is in place, but needs to be enhanced with more detailed information
-   - Need to implement proper recovery mechanisms for various failure scenarios
+   - Improved error handling for Discord SDK event subscriptions with better scope documentation
+   - Enhanced Kaltura player error handling for manifest parsing issues
+   - Added custom error handler for manifest parsing errors
+   - Still need to implement more comprehensive recovery mechanisms for various failure scenarios
 
 3. **Testing Coverage**
    - Limited testing has been done on mobile clients

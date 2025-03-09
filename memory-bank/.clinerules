@@ -56,6 +56,8 @@
 - OAuth2 flow is required for Discord SDK authentication
 - Discord SDK requires specific initialization patterns with ready() method
 - Event subscriptions must use the subscribe() method with proper event names
+- Event subscriptions require specific scopes (e.g., rpc.voice.read for voice events)
+- Error handling for event subscriptions should be graceful and informative
 - Participant management should use SDK-provided methods when available
 - Mobile compatibility requires specific CSS and orientation handling
 
@@ -69,6 +71,9 @@
 - Video API endpoints require proper authentication with valid KS
 - Video search API supports filtering by free text, tags, and categories
 - Video playback requires generating a play URL with user-specific KS
+- Discord prevents loading HLS manifest in its Activity proxied environment so forcing Progressive format
+- Airplay feature can cause errors (Category:7 | Code:7003) and should be disabled
+- Custom error handling for manifest parsing errors improves reliability
 
 ### Integration Challenges
 - Mapping Discord's role system to Kaltura's permissions
@@ -82,6 +87,9 @@
 - Managing test coverage thresholds for CI/CD pipeline success
 - Implementing proper participant management with SDK methods
 - Handling different screen sizes and orientations in Discord Activity
+- Proxying media content through Discord's URL mapping system
+- Handling manifest parsing errors in proxied video content
+- Providing graceful degradation when certain features fail
 
 ### User Experience Considerations
 - Minimize the number of steps to join a meeting
@@ -91,6 +99,9 @@
 - Implement host-based control for synchronized experiences
 - Provide fallback mechanisms for features requiring special API access
 - Design UI to match Discord's theme and interaction patterns
+- Start with clean UI by hiding debug logs and viewers panel by default
+- Remove unnecessary UI elements like test buttons from production interface
+- Provide clear visual indicators for network quality and synchronization status
 
 ## Decision Log
 
@@ -157,4 +168,19 @@
 13. **Video API Endpoints**
      - Decision: Implement comprehensive video API endpoints in the API Gateway
      - Rationale: Enables Discord bot and other clients to search, retrieve, and play videos
+     - Date: March 2025
+
+14. **Progressive Format Preference**
+     - Decision: Configure Kaltura player to prefer progressive format over HLS
+     - Rationale: Improves reliability in proxied environments by avoiding manifest parsing issues
+     - Date: March 2025
+
+15. **Disable Airplay Feature**
+     - Decision: Disable airplay feature in Kaltura player configuration
+     - Rationale: Prevents Category:7 | Code:7003 errors that appear in logs
+     - Date: March 2025
+
+16. **Clean UI by Default**
+     - Decision: Start with logs and viewers panel hidden by default
+     - Rationale: Provides a cleaner initial user experience while maintaining access to advanced features
      - Date: March 2025

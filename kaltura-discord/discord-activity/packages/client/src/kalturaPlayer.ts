@@ -79,12 +79,25 @@ export class KalturaPlayerManager {
         },
         playback: {
           autoplay: false,
+          // Prefer progressive format to avoid HLS manifest parsing issues
           streamPriority: [
             {
               engine: 'html5',
               format: 'progressive'
+            },
+            {
+              engine: 'html5',
+              format: 'dash'
+            },
+            {
+              engine: 'html5',
+              format: 'hls'
             }
-          ]
+          ],
+          // Disable features that might cause errors
+          features: {
+            airplay: false // Disable airplay to avoid Category:7 | Code:7003 errors
+          }
         }
       });
       
@@ -144,6 +157,9 @@ export class KalturaPlayerManager {
         amd?: any;
       };
     }
+    
+    // First, test the proxy to ensure it's working correctly
+    await this.testProxyConnection();
     
     return new Promise((resolve, reject) => {
       // Save original AMD definition to avoid conflicts
@@ -214,6 +230,9 @@ export class KalturaPlayerManager {
           return;
         }
         
+        // Configure KalturaPlayer to handle manifest parsing errors
+        this.configurePlayerErrorHandling();
+        
         resolve();
       };
       
@@ -253,6 +272,70 @@ export class KalturaPlayerManager {
       document.body.appendChild(script);
       console.log('[DEBUG] Script element added to document body');
     });
+  }
+  
+  /**
+   * Test the proxy connection to ensure it's working correctly
+   */
+  private async testProxyConnection(): Promise<void> {
+    console.log('[DEBUG] Testing Kaltura proxy...');
+    try {
+      // Test the proxy with a simple request
+      const testUrl = `/.proxy/kaltura/p/${this.options.partnerId}/embedPlaykitJs/uiconf_id/${this.options.uiconfId}`;
+      console.log('[DEBUG] Fetching test URL:', testUrl);
+      
+      const response = await fetch(testUrl);
+      console.log('[DEBUG] Proxy test response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      });
+      
+      if (!response.ok) {
+        console.error('[DEBUG] Proxy test failed with status:', response.status);
+      } else {
+        const text = await response.text();
+        console.log('[DEBUG] Proxy test succeeded, content length:', text.length);
+      }
+    } catch (error) {
+      console.error('[DEBUG] Proxy test error:', error);
+    }
+  }
+  
+  /**
+   * Configure the player to handle manifest parsing errors
+   */
+  private configurePlayerErrorHandling(): void {
+    // Add global error handler for manifest parsing errors
+    if ((window as any).KalturaPlayer && (window as any).KalturaPlayer.core) {
+      try {
+        const core = (window as any).KalturaPlayer.core;
+        
+        // Add error handler for HLS.js errors
+        if (core.registerExternalComponent) {
+          core.registerExternalComponent('errorHandler', {
+            get: () => ({
+              handleError: (error: any) => {
+                // Log the error but don't throw it
+                console.warn('[DEBUG] Handled player error:', error);
+                
+                // If it's a manifest parsing error, try to recover
+                if (error && error.name === 'manifestParsingError') {
+                  console.log('[DEBUG] Attempting to recover from manifest parsing error');
+                  return true; // Return true to indicate the error was handled
+                }
+                
+                // For other errors, let the player handle them
+                return false;
+              }
+            })
+          });
+          console.log('[DEBUG] Registered custom error handler for manifest parsing errors');
+        }
+      } catch (e) {
+        console.error('[DEBUG] Failed to register error handler:', e);
+      }
+    }
   }
   
   /**

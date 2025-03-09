@@ -3,6 +3,29 @@ import { UserPresence, NetworkQuality, UserStatus, PresenceEvent } from './types
 
 export const discordSdk = new DiscordSDK(import.meta.env.VITE_CLIENT_ID);
 
+// Define the Discord SDK event types
+type DiscordSDKEvent =
+  | "READY"
+  | "VOICE_STATE_UPDATE"
+  | "SPEAKING_START"
+  | "SPEAKING_STOP"
+  | "ACTIVITY_LAYOUT_MODE_UPDATE"
+  | "ORIENTATION_UPDATE"
+  | "ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE"
+  | "CURRENT_USER_UPDATE"
+  | "CURRENT_GUILD_MEMBER_UPDATE"
+  | "ENTITLEMENT_CREATE"
+  | "THERMAL_STATE_UPDATE";
+
+// Define the subscription type
+interface EventSubscription {
+  event: DiscordSDKEvent;
+  handler: (data: any) => void;
+  requiresChannelId: boolean;
+  requiresScope: boolean;
+  scope?: string;
+}
+
 /**
  * Initialize event subscriptions according to the official Discord SDK documentation
  * @see https://discord.com/developers/docs/activities/sdk-events
@@ -11,19 +34,19 @@ export async function initializeEventSubscriptions() {
   try {
     console.log('[DEBUG] Setting up Discord SDK event subscriptions');
     
-    try {
-      // Subscribe to READY event
-      await discordSdk.subscribe("READY", (data) => {
-        console.log('[DEBUG] Discord SDK READY event received:', data);
-      });
-    } catch (e) {
-      console.warn('[DEBUG] Could not subscribe to READY event:', e);
-    }
-    
-    // Subscribe to voice state updates if we have a channel ID
-    if (discordSdk.channelId) {
-      try {
-        await discordSdk.subscribe("VOICE_STATE_UPDATE", (data) => {
+    // List of events to subscribe to with their required scopes
+    const eventSubscriptions: EventSubscription[] = [
+      {
+        event: "READY",
+        handler: (data: any) => {
+          console.log('[DEBUG] Discord SDK READY event received:', data);
+        },
+        requiresChannelId: false,
+        requiresScope: false
+      },
+      {
+        event: "VOICE_STATE_UPDATE",
+        handler: (data: any) => {
           console.log('[DEBUG] Discord SDK VOICE_STATE_UPDATE event received:', data);
           // Update user presence when voice state changes
           if (data.user) {
@@ -33,14 +56,14 @@ export async function initializeEventSubscriptions() {
               lastActive: Date.now()
             });
           }
-        }, { channel_id: discordSdk.channelId });
-      } catch (e) {
-        console.warn('[DEBUG] Could not subscribe to VOICE_STATE_UPDATE event:', e);
-      }
-      
-      // Subscribe to speaking events
-      try {
-        await discordSdk.subscribe("SPEAKING_START", (data) => {
+        },
+        requiresChannelId: true,
+        requiresScope: true,
+        scope: "rpc.voice.read"
+      },
+      {
+        event: "SPEAKING_START",
+        handler: (data: any) => {
           console.log('[DEBUG] Discord SDK SPEAKING_START event received:', data);
           // Update user activity when they start speaking
           if (data.user_id) {
@@ -49,58 +72,91 @@ export async function initializeEventSubscriptions() {
               lastActive: Date.now()
             });
           }
-        }, { channel_id: discordSdk.channelId });
-      } catch (e) {
-        console.warn('[DEBUG] Could not subscribe to SPEAKING_START event:', e);
+        },
+        requiresChannelId: true,
+        requiresScope: true,
+        scope: "rpc.voice.read"
+      },
+      {
+        event: "SPEAKING_STOP",
+        handler: (data: any) => {
+          console.log('[DEBUG] Discord SDK SPEAKING_STOP event received:', data);
+        },
+        requiresChannelId: true,
+        requiresScope: true,
+        scope: "rpc.voice.read"
+      },
+      {
+        event: "ACTIVITY_LAYOUT_MODE_UPDATE",
+        handler: (data: any) => {
+          console.log('[DEBUG] Discord SDK ACTIVITY_LAYOUT_MODE_UPDATE event received:', data);
+          // Update UI based on layout mode
+          document.body.setAttribute('data-layout-mode', String(data.layout_mode));
+        },
+        requiresChannelId: false,
+        requiresScope: false
+      },
+      {
+        event: "ORIENTATION_UPDATE",
+        handler: (data: any) => {
+          console.log('[DEBUG] Discord SDK ORIENTATION_UPDATE event received:', data);
+          // Update UI based on orientation
+          document.body.setAttribute('data-orientation', String(data.orientation));
+        },
+        requiresChannelId: false,
+        requiresScope: false
+      },
+      {
+        event: "ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE",
+        handler: (data: any) => {
+          console.log('[DEBUG] Discord SDK ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE event received:', data);
+          // This event provides participant information for syncing
+          if (data.participants) {
+            handleParticipantUpdate(data.participants);
+          }
+          
+          // Broadcast participant update to trigger UI refresh
+          sendMessage('PARTICIPANT_UPDATE', {
+            timestamp: Date.now()
+          });
+        },
+        requiresChannelId: false,
+        requiresScope: false
+      }
+    ];
+    
+    // Subscribe to each event
+    for (const subscription of eventSubscriptions) {
+      // Skip if we need a channel ID but don't have one
+      if (subscription.requiresChannelId && !discordSdk.channelId) {
+        console.log(`[DEBUG] Skipping ${subscription.event} subscription - no channel ID available`);
+        continue;
       }
       
       try {
-        await discordSdk.subscribe("SPEAKING_STOP", (data) => {
-          console.log('[DEBUG] Discord SDK SPEAKING_STOP event received:', data);
-        }, { channel_id: discordSdk.channelId });
-      } catch (e) {
-        console.warn('[DEBUG] Could not subscribe to SPEAKING_STOP event:', e);
-      }
-    }
-    
-    // Subscribe to activity layout mode updates
-    try {
-      await discordSdk.subscribe("ACTIVITY_LAYOUT_MODE_UPDATE", (data) => {
-        console.log('[DEBUG] Discord SDK ACTIVITY_LAYOUT_MODE_UPDATE event received:', data);
-        // Update UI based on layout mode
-        document.body.setAttribute('data-layout-mode', String(data.layout_mode));
-      });
-    } catch (e) {
-      console.warn('[DEBUG] Could not subscribe to ACTIVITY_LAYOUT_MODE_UPDATE event:', e);
-    }
-    
-    // Subscribe to orientation updates (important for mobile)
-    try {
-      await discordSdk.subscribe("ORIENTATION_UPDATE", (data) => {
-        console.log('[DEBUG] Discord SDK ORIENTATION_UPDATE event received:', data);
-        // Update UI based on orientation
-        document.body.setAttribute('data-orientation', String(data.orientation));
-      });
-    } catch (e) {
-      console.warn('[DEBUG] Could not subscribe to ORIENTATION_UPDATE event:', e);
-    }
-    
-    // Subscribe to participant updates
-    try {
-      await discordSdk.subscribe("ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE", (data) => {
-        console.log('[DEBUG] Discord SDK ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE event received:', data);
-        // This event provides participant information for syncing
-        if (data.participants) {
-          handleParticipantUpdate(data.participants);
+        // According to the Discord SDK documentation, the subscribe method accepts
+        // an event name, a handler function, and optional subscription args
+        if (subscription.requiresChannelId && discordSdk.channelId) {
+          // For events that require a channel ID, we need to pass it as a subscription arg
+          await discordSdk.subscribe(
+            subscription.event,
+            subscription.handler,
+            // Cast to any to avoid TypeScript errors with the channel_id parameter
+            { channel_id: discordSdk.channelId } as any
+          );
+        } else {
+          // For events that don't require a channel ID, we don't pass any subscription args
+          await discordSdk.subscribe(subscription.event, subscription.handler);
         }
-        
-        // Broadcast participant update to trigger UI refresh
-        sendMessage('PARTICIPANT_UPDATE', {
-          timestamp: Date.now()
-        });
-      });
-    } catch (e) {
-      console.warn('[DEBUG] Could not subscribe to ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE event:', e);
+        console.log(`[DEBUG] Successfully subscribed to ${subscription.event} event`);
+      } catch (e) {
+        // Log with more context about required scopes
+        if (subscription.requiresScope) {
+          console.warn(`[DEBUG] Could not subscribe to ${subscription.event} event: ${e}. This event requires the "${subscription.scope}" scope.`);
+        } else {
+          console.warn(`[DEBUG] Could not subscribe to ${subscription.event} event:`, e);
+        }
+      }
     }
     
     console.log('[DEBUG] Discord SDK event subscriptions set up successfully');

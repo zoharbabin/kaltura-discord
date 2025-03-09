@@ -37,9 +37,31 @@ async function init() {
     { prefix: '/kaltura', target: 'cdnapisec.kaltura.com' },
     { prefix: '/kaltura-cdn', target: 'cfvod.kaltura.com' },
     { prefix: '/kaltura-api', target: 'api.kaltura.com' },
-    { prefix: '/kaltura-hls', target: 'cfvod.kaltura.com/scf/hls' }
+    { prefix: '/kaltura-summary', target: 'summary.nvp1.ovp.kaltura.com' },
+    { prefix: '/kaltura-com', target: 'www.kaltura.com' },
+    { prefix: '/kaltura-genie', target: 'genie.nvp1.ovp.kaltura.com' }
   ]);
   console.log('[DEBUG] URL mappings patched');
+  
+  // Add a function to test the proxy configuration
+  const testProxyConfiguration = async () => {
+    try {
+      console.log('[DEBUG] Testing proxy configuration for manifest files');
+      const testUrl = '/.proxy/kaltura/p/5896392/embedPlaykitJs/uiconf_id/56085172';
+      const response = await fetch(testUrl);
+      
+      if (!response.ok) {
+        console.error('[DEBUG] Proxy test failed:', response.status, response.statusText);
+      } else {
+        console.log('[DEBUG] Proxy test succeeded for embedPlaykitJs');
+      }
+    } catch (error) {
+      console.error('[DEBUG] Error testing proxy configuration:', error);
+    }
+  };
+  
+  // Run the proxy test
+  await testProxyConfiguration();
   
   // Create a debug panel to show errors in the activity, but hide it by default
   const debugPanel = document.createElement('div');
@@ -101,7 +123,7 @@ async function init() {
   if (isAdmin) {
     // Add a button to show/hide the debug panel
     const showLogButton = document.createElement('button');
-    showLogButton.textContent = 'Hide Log'; // Changed to 'Hide Log' since the log is visible by default
+    showLogButton.textContent = 'Show Log'; // Start with log hidden
     showLogButton.style.padding = '5px 10px';
     showLogButton.style.backgroundColor = '#444';
     showLogButton.style.color = 'white';
@@ -110,7 +132,9 @@ async function init() {
     showLogButton.style.cursor = 'pointer';
     
     // Add show/hide functionality for debug panel
-    let isLogVisible = true; // Set to true since debug panel is visible by default
+    let isLogVisible = false; // Start with log hidden
+    debugPanel.style.display = 'none'; // Hide debug panel by default
+    
     showLogButton.addEventListener('click', () => {
       if (isLogVisible) {
         debugPanel.style.display = 'none';
@@ -234,57 +258,7 @@ async function init() {
   app.appendChild(loadingElement);
   console.log('[DEBUG] Added loading screen to DOM');
   
-  // Add a test button to check if the proxy is working (available to all users)
-  const testButton = document.createElement('button');
-  testButton.textContent = 'Test Kaltura Proxy';
-  testButton.style.position = 'fixed';
-  testButton.style.top = '10px';
-  testButton.style.right = '10px';
-  testButton.style.zIndex = '9999';
-  testButton.style.padding = '5px 10px';
-  testButton.style.backgroundColor = '#ff5500'; // Bright orange for visibility
-  testButton.style.color = 'white';
-  testButton.style.border = 'none';
-  testButton.style.borderRadius = '3px';
-  testButton.style.cursor = 'pointer';
-  testButton.style.fontWeight = 'bold';
-    testButton.addEventListener('click', async () => {
-      console.log('[DEBUG] Testing Kaltura proxy...');
-      try {
-        // Get the actual partnerId and uiconfId from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const partnerId = urlParams.get('partnerId') || '5896392';
-        const uiconfId = urlParams.get('uiconfId') || '56085172';
-        
-        // Try to fetch a resource through the proxy using actual IDs
-        const testUrl = `/.proxy/kaltura/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}`;
-        console.log('[DEBUG] Fetching test URL:', testUrl);
-        
-        const response = await fetch(testUrl);
-        // Get headers as an object
-        const headers: Record<string, string> = {};
-        response.headers.forEach((value, key) => {
-          headers[key] = value;
-        });
-        
-        console.log('[DEBUG] Proxy test response:', {
-          ok: response.ok,
-          status: response.status,
-          statusText: response.statusText,
-          headers
-        });
-        
-        if (!response.ok) {
-          console.error('[DEBUG] Proxy test failed with status:', response.status);
-        } else {
-          const text = await response.text();
-          console.log('[DEBUG] Proxy test succeeded, content length:', text.length);
-        }
-      } catch (error) {
-        console.error('[DEBUG] Proxy test error:', error);
-      }
-    });
-    document.body.appendChild(testButton);
+  // Removed the "Test Kaltura Proxy" button as requested
 
   try {
     // Initialize Discord SDK
@@ -465,6 +439,15 @@ function createUI(videoId: string, partnerId: string, uiconfId: string) {
   // Create user presence display
   console.log('[DEBUG] Creating user presence display');
   const userPresenceDisplay = new UserPresenceDisplay(playerContainer);
+  
+  // Hide the user presence display by default
+  setTimeout(() => {
+    const presenceContainer = document.querySelector('.user-presence-container') as HTMLElement;
+    if (presenceContainer) {
+      presenceContainer.style.display = 'none';
+      console.log('[DEBUG] User presence display hidden by default');
+    }
+  }, 100); // Small delay to ensure the element is in the DOM
   
   // Store references for later use
   window.networkIndicator = networkIndicator;
