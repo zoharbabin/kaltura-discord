@@ -86,6 +86,8 @@ export async function startApiGateway(): Promise<void> {
     // API routes
     app.use('/api/meetings', createMeetingRoutes());
     app.use('/api/auth', createAuthRoutes());
+    app.use('/api/videos', createVideoRoutes());
+    app.use('/api/kaltura/video', createKalturaVideoRoutes());
     
     // Error handling middleware
     app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
@@ -245,6 +247,129 @@ function createMeetingRoutes() {
     } catch (error) {
       logger.error('Error generating join URL', { error, meetingId: req.params.id });
       res.status(500).json({ error: 'Failed to generate join URL' });
+    }
+  });
+  
+  return router;
+}
+
+/**
+ * Create video routes
+ */
+function createVideoRoutes() {
+  const router = express.Router();
+  
+  // Apply authentication middleware to all video routes
+  router.use(authMiddleware as express.RequestHandler);
+  
+  // Get all videos
+  router.get('/', async (req: Request, res: Response) => {
+    try {
+      // Get the authenticated user
+      const user = (req as any).user;
+      
+      // List videos (default parameters)
+      const videos = await kalturaClient.searchVideos({
+        freeText: '',
+        limit: 10,
+        page: 1
+      });
+      
+      res.status(200).json({ videos });
+    } catch (error) {
+      logger.error('Error getting videos', { error });
+      res.status(500).json({ error: 'Failed to get videos' });
+    }
+  });
+  
+  // Search for videos
+  router.get('/search', async (req: Request, res: Response) => {
+    try {
+      // Get the authenticated user
+      const user = (req as any).user;
+      
+      // Get search parameters from query
+      const query = req.query.q as string || '';
+      const limit = parseInt(req.query.limit as string || '10', 10);
+      const page = parseInt(req.query.page as string || '1', 10);
+      
+      // Search for videos
+      const videos = await kalturaClient.searchVideos({
+        freeText: query,
+        limit,
+        page
+      });
+      
+      res.status(200).json({ videos });
+    } catch (error) {
+      logger.error('Error searching videos', { error });
+      res.status(500).json({ error: 'Failed to search videos' });
+    }
+  });
+  
+  // Get a specific video
+  router.get('/:id', async (req: Request, res: Response) => {
+    try {
+      // Get the video ID from the URL
+      const videoId = req.params.id;
+      
+      // Get the video
+      const video = await kalturaClient.getVideo(videoId);
+      
+      res.status(200).json({ video });
+    } catch (error) {
+      logger.error('Error getting video', { error, videoId: req.params.id });
+      res.status(500).json({ error: 'Failed to get video' });
+    }
+  });
+  
+  // Generate play URL for a video
+  router.post('/:id/play', async (req: Request, res: Response): Promise<any> => {
+    try {
+      // Get the video ID from the URL
+      const videoId = req.params.id;
+      
+      // Get the authenticated user
+      const user = (req as any).user;
+      
+      // Generate play URL for the video
+      const playUrl = await kalturaClient.generateVideoPlayUrl(videoId, user.kalturaUserId);
+      
+      res.status(200).json({
+        playUrl,
+        videoId
+      });
+    } catch (error) {
+      logger.error('Error generating play URL', { error, videoId: req.params.id });
+      res.status(500).json({ error: 'Failed to generate play URL' });
+    }
+  });
+  
+  return router;
+}
+
+/**
+ * Create Kaltura video routes
+ */
+function createKalturaVideoRoutes() {
+  const router = express.Router();
+  
+  // Apply authentication middleware to all Kaltura video routes
+  router.use(authMiddleware as express.RequestHandler);
+  
+  // Get a specific Kaltura video
+  router.get('/:id', async (req: Request, res: Response) => {
+    try {
+      // Get the video ID from the URL
+      const videoId = req.params.id;
+      
+      // Get the video
+      const video = await kalturaClient.getVideo(videoId);
+      
+      res.status(200).json({ video });
+    } catch (error) {
+      logger.error('Error getting Kaltura video', { error, videoId: req.params.id });
+      res.status(500).json({ error: 'Failed to get Kaltura video' });
     }
   });
   

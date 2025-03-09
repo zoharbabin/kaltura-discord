@@ -138,3 +138,59 @@ body,
   cursor: pointer;
   font-weight: bold;
 }
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .player-container {
+    height: calc(100% - 50px); /* Smaller controls on mobile */
+  }
+  
+  .controls {
+    height: 50px;
+    padding: 0 10px;
+  }
+  
+  .controls button {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .user-list {
+    top: 5px;
+    right: 5px;
+    padding: 5px;
+  }
+  
+  .user-avatar {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .user-name {
+    font-size: 12px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .controls button {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin: 0 2px;
+  }
+  
+  .error, .loading {
+    font-size: 16px;
+  }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  .player-container {
+    height: calc(100% - 40px); /* Even smaller controls in landscape */
+  }
+  
+  .controls {
+    height: 40px;
+  }
+}

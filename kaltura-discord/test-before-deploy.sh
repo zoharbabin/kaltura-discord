@@ -13,6 +13,7 @@ print_status() {
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local YELLOW='\033[1;33m'
+  local BLUE='\033[0;34m'
   local NC='\033[0m' # No Color
   
   if [ "$color" = "red" ]; then
@@ -21,29 +22,57 @@ print_status() {
     echo -e "${GREEN}$message${NC}"
   elif [ "$color" = "yellow" ]; then
     echo -e "${YELLOW}$message${NC}"
+  elif [ "$color" = "blue" ]; then
+    echo -e "${BLUE}$message${NC}"
   else
     echo "$message"
   fi
 }
 
-# Check if environment files exist
+# Check if environment file exists
 check_env_files() {
   print_status "yellow" "Checking environment files..."
   
   local missing_files=0
   
-  if [ ! -f .env.production ]; then
-    print_status "red" "Error: .env.production file not found"
+  if [ ! -f .env ]; then
+    print_status "red" "Error: .env file not found"
+    print_status "yellow" "A single .env file is required for both components"
     missing_files=$((missing_files+1))
   else
-    print_status "green" "✓ .env.production file found"
+    print_status "green" "✓ .env file found"
+    
+    # Check if the .env file contains required variables
+    local required_vars=("DISCORD_BOT_TOKEN" "DISCORD_CLIENT_ID" "DISCORD_CLIENT_SECRET"
+                         "KALTURA_PARTNER_ID" "KALTURA_ADMIN_SECRET" "JWT_SECRET"
+                         "DISCORD_APPLICATION_ID" "DISCORD_ACTIVITY_URL")
+    
+    local missing_vars=0
+    for var in "${required_vars[@]}"; do
+      if ! grep -q "^$var=" .env; then
+        print_status "yellow" "⚠ $var is missing from .env file"
+        missing_vars=$((missing_vars+1))
+      fi
+    done
+    
+    if [ $missing_vars -gt 0 ]; then
+      print_status "yellow" "⚠ $missing_vars required environment variables are missing"
+    else
+      print_status "green" "✓ All required environment variables are present"
+    fi
   fi
   
-  if [ ! -f discord-activity/.env.production ]; then
-    print_status "red" "Error: discord-activity/.env.production file not found"
-    missing_files=$((missing_files+1))
-  else
-    print_status "green" "✓ discord-activity/.env.production file found"
+  # Check if symbolic link exists in discord-activity directory
+  if [ -d discord-activity ]; then
+    if [ ! -f discord-activity/.env ] && [ ! -L discord-activity/.env ]; then
+      print_status "yellow" "⚠ No .env file or symbolic link found in discord-activity directory"
+      print_status "yellow" "Consider creating a symbolic link: ln -s ../.env discord-activity/.env"
+    elif [ -L discord-activity/.env ]; then
+      print_status "green" "✓ Symbolic link to .env found in discord-activity directory"
+    else
+      print_status "yellow" "⚠ .env file in discord-activity directory is not a symbolic link"
+      print_status "yellow" "Consider using a symbolic link for better maintainability"
+    fi
   fi
   
   return $missing_files
@@ -99,6 +128,24 @@ run_unit_tests() {
     fi
   else
     print_status "yellow" "No test script found in package.json, skipping"
+    return 0
+  fi
+}
+
+# Run end-to-end tests
+run_e2e_tests() {
+  print_status "yellow" "Running end-to-end tests..."
+  
+  if [ -f package.json ] && grep -q '"test:e2e"' package.json; then
+    if npm run test:e2e; then
+      print_status "green" "✓ End-to-end tests passed"
+      return 0
+    else
+      print_status "red" "✗ End-to-end tests failed"
+      return 1
+    fi
+  else
+    print_status "yellow" "No test:e2e script found in package.json, skipping"
     return 0
   fi
 }
@@ -168,9 +215,113 @@ check_discord_activity() {
   fi
 }
 
+# Check Discord Activity SDK alignment
+check_discord_activity_sdk() {
+  print_status "yellow" "Checking Discord Activity SDK alignment..."
+  
+  if [ -d discord-activity ]; then
+    local sdk_issues=0
+    
+    # Check for proper SDK import
+    if grep -q "@discord/embedded-app-sdk" discord-activity/packages/client/package.json; then
+      print_status "green" "✓ Discord Embedded App SDK dependency found"
+    else
+      print_status "red" "✗ Discord Embedded App SDK dependency not found"
+      print_status "yellow" "Add @discord/embedded-app-sdk to discord-activity/packages/client/package.json"
+      sdk_issues=$((sdk_issues+1))
+    fi
+    
+    # Check for SDK initialization in client code
+    if [ -f discord-activity/packages/client/src/discordSdk.ts ]; then
+      if grep -q "discordSdk.ready" discord-activity/packages/client/src/discordSdk.ts; then
+        print_status "green" "✓ Discord SDK initialization found"
+      else
+        print_status "yellow" "⚠ Discord SDK initialization may not follow official patterns"
+        print_status "yellow" "Check discord.ready() implementation in discordSdk.ts"
+        sdk_issues=$((sdk_issues+1))
+      fi
+      
+      # Check for event subscriptions
+      if grep -q "discordSdk.subscribe" discord-activity/packages/client/src/discordSdk.ts; then
+        print_status "green" "✓ Discord SDK event subscriptions found"
+      else
+        print_status "yellow" "⚠ Discord SDK event subscriptions may be missing"
+        print_status "yellow" "Check for discord.subscribe() calls in discordSdk.ts"
+        sdk_issues=$((sdk_issues+1))
+      fi
+    else
+      print_status "yellow" "⚠ Discord SDK implementation file not found at expected location"
+      sdk_issues=$((sdk_issues+1))
+    fi
+    
+    # Check for participant management
+    if [ -f discord-activity/packages/client/src/syncService.ts ]; then
+      if grep -q "getParticipants" discord-activity/packages/client/src/syncService.ts ||
+         grep -q "getParticipants" discord-activity/packages/client/src/discordSdk.ts ||
+         grep -q "getActivityParticipants" discord-activity/packages/client/src/discordSdk.ts; then
+        print_status "green" "✓ SDK-based participant management found"
+      else
+        print_status "yellow" "⚠ SDK-based participant management may be missing"
+        print_status "yellow" "Consider using discord.activities.getParticipants() for participant tracking"
+        sdk_issues=$((sdk_issues+1))
+      fi
+    fi
+    
+    # Check for mobile compatibility
+    if [ -f discord-activity/packages/client/src/style.css ]; then
+      if grep -q "@media.*mobile\|@media.*max-width" discord-activity/packages/client/src/style.css; then
+        print_status "green" "✓ Mobile-specific CSS found"
+      else
+        print_status "yellow" "⚠ Mobile-specific CSS may be missing"
+        print_status "yellow" "Consider adding mobile-specific styles for better compatibility"
+        sdk_issues=$((sdk_issues+1))
+      fi
+    fi
+    
+    if [ $sdk_issues -gt 0 ]; then
+      print_status "yellow" "⚠ $sdk_issues potential Discord Activity SDK alignment issues found"
+      print_status "yellow" "Review the Discord Activity implementation against official documentation"
+      return 1
+    else
+      print_status "green" "✓ Discord Activity SDK alignment checks passed"
+      return 0
+    fi
+  else
+    print_status "yellow" "Discord Activity directory not found, skipping SDK alignment check"
+    return 0
+  fi
+}
+
+# Check Discord Activity URL configuration
+check_discord_activity_url() {
+  print_status "yellow" "Checking Discord Activity URL configuration..."
+  
+  # Check if DISCORD_ACTIVITY_URL is set in .env
+  if [ -f .env ] && grep -q "^DISCORD_ACTIVITY_URL=" .env; then
+    print_status "green" "✓ DISCORD_ACTIVITY_URL is set in .env file"
+    
+    # Check if the URL is used in the code
+    if grep -q "DISCORD_ACTIVITY_URL" src/discord/kalturaActivity.ts 2>/dev/null ||
+       grep -q "DISCORD_ACTIVITY_URL" dist/discord/kalturaActivity.js 2>/dev/null; then
+      print_status "green" "✓ DISCORD_ACTIVITY_URL is used in the code"
+      return 0
+    else
+      print_status "yellow" "⚠ DISCORD_ACTIVITY_URL may not be properly used in the code"
+      print_status "yellow" "Check src/discord/kalturaActivity.ts for proper environment variable usage"
+      return 1
+    fi
+  else
+    print_status "yellow" "⚠ DISCORD_ACTIVITY_URL is not set in .env file"
+    print_status "yellow" "Add DISCORD_ACTIVITY_URL to .env file"
+    return 1
+  fi
+}
+
 # Main function
 main() {
-  print_status "yellow" "Running pre-deployment tests..."
+  print_status "blue" "Running pre-deployment tests for Kaltura-Discord Integration..."
+  print_status "blue" "This script checks code quality, builds, and configuration before deployment"
+  echo ""
   
   local failed=0
   
@@ -179,9 +330,12 @@ main() {
   run_eslint || failed=$((failed+1))
   check_typescript || failed=$((failed+1))
   run_unit_tests || failed=$((failed+1))
+  run_e2e_tests || failed=$((failed+1))
   check_security
   check_outdated
   check_discord_activity || failed=$((failed+1))
+  check_discord_activity_sdk || failed=$((failed+1))
+  check_discord_activity_url || failed=$((failed+1))
   
   # Print summary
   echo ""

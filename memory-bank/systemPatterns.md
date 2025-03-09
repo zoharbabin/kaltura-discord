@@ -27,6 +27,7 @@ The API Gateway serves as the single entry point for all client-side requests, p
 - Authentication and authorization
 - Rate limiting and throttling
 - Version management
+- Video API endpoints for searching, retrieving, and playing videos
 
 ### Event-Driven Architecture
 For notifications and asynchronous processes:

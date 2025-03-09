@@ -1,5 +1,5 @@
 import './style.css';
-import { initializeDiscordSDK, getCurrentUser, getVoiceChannel, addMessageListener } from './discordSdk';
+import { initializeDiscordSDK, getCurrentUser, getVoiceChannel, addMessageListener, initializeEventSubscriptions, getActivityParticipants, Participant } from './discordSdk';
 import { KalturaPlayerManager } from './kalturaPlayer';
 import { SynchronizationService } from './syncService';
 
@@ -40,6 +40,11 @@ async function init() {
     try {
       await initializeDiscordSDK();
       console.log('[DEBUG] Discord SDK initialized successfully');
+      
+      // Initialize event subscriptions
+      console.log('[DEBUG] Setting up Discord SDK event subscriptions');
+      await initializeEventSubscriptions();
+      console.log('[DEBUG] Discord SDK event subscriptions initialized');
     } catch (discordError) {
       console.error('[DEBUG] Discord SDK initialization failed:', discordError);
       throw discordError;
@@ -332,6 +337,60 @@ function setupMessageListeners() {
       }
     }
   });
+  
+  // Listen for participant updates
+  addMessageListener('PARTICIPANT_UPDATE', () => {
+    updateParticipantList();
+  });
+  
+  // Set up a timer to periodically update the participant list
+  setInterval(updateParticipantList, 10000); // Update every 10 seconds
+  
+  // Initial participant list update
+  updateParticipantList();
+}
+
+// Update the participant list UI
+async function updateParticipantList() {
+  try {
+    console.log('[DEBUG] Updating participant list');
+    const participants = await getActivityParticipants();
+    
+    const userListElement = document.querySelector('.user-list');
+    if (!userListElement) {
+      console.error('[DEBUG] User list element not found');
+      return;
+    }
+    
+    // Clear existing content
+    userListElement.innerHTML = '';
+    
+    // Add each participant to the list
+    participants.forEach((participant: Participant) => {
+      const userElement = document.createElement('div');
+      userElement.className = 'user';
+      
+      const nameElement = document.createElement('span');
+      nameElement.className = 'user-name';
+      nameElement.textContent = participant.username || 'Unknown User';
+      
+      userElement.appendChild(nameElement);
+      
+      // Add host badge if this participant is the host
+      if (participant.id === hostId || participant.isHost) {
+        const hostBadge = document.createElement('span');
+        hostBadge.className = 'host-badge';
+        hostBadge.textContent = 'HOST';
+        userElement.appendChild(hostBadge);
+      }
+      
+      userListElement.appendChild(userElement);
+    });
+    
+    console.log('[DEBUG] Participant list updated with', participants.length, 'users');
+  } catch (error) {
+    console.error('[DEBUG] Error updating participant list:', error);
+  }
 }
 
 // Show error message
