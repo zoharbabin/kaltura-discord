@@ -463,22 +463,17 @@ kaltura-discord/
 ├── tests/
 │   └── end-to-end-test.js
 ├── .env.example
-├── cleanup-env.sh
 ├── deploy-dev.sh
 ├── deploy-prod.sh
 ├── package.json
 ├── README.md
-├── simplify-env.sh
 ├── test-before-deploy.sh
 └── tsconfig.json
 ```
 
 ### Development Workflow
 
-1. Set up the environment:
-   ```bash
-   ./simplify-env.sh
-   ```
+1. Set up the environment variables in your `.env` file
 
 2. Start the development server:
    ```bash
@@ -542,17 +537,13 @@ This script will:
 
 ### Environment Management
 
-The project uses a simplified approach to environment management:
+The project uses a streamlined approach to environment management:
 
 1. A single `.env` file for both components
 2. Environment-specific variables set by deployment scripts at runtime
 3. Symbolic link for shared environment file between components
 
-To simplify environment variable management:
-
-```bash
-./simplify-env.sh
-```
+Create a `.env` file in the project root with all required environment variables. The deployment scripts will automatically set additional environment-specific variables at runtime.
 
 ## Contributing
 

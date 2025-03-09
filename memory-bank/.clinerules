@@ -184,3 +184,8 @@
      - Decision: Start with logs and viewers panel hidden by default
      - Rationale: Provides a cleaner initial user experience while maintaining access to advanced features
      - Date: March 2025
+
+17. **V1 Release Cleanup**
+     - Decision: Remove references to non-existent scripts and update documentation for v1 release
+     - Rationale: Ensures a clean, consistent codebase and documentation for the official release
+     - Date: March 2025

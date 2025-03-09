@@ -27,7 +27,7 @@ if [ -f .env ]; then
   export ENABLE_API_GATEWAY=true
 else
   echo "Error: .env file not found"
-  echo "Please run ./simplify-env.sh to create a consolidated .env file"
+  echo "Please create a .env file with the required environment variables"
   exit 1
 fi
 

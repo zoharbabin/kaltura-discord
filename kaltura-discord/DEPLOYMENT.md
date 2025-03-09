@@ -16,14 +16,12 @@ Before deploying, ensure you have the following:
 
 ## Environment Configuration
 
-The application uses different environment files for development and production:
+The application uses a single `.env` file for both development and production environments. The deployment scripts automatically set additional environment-specific variables at runtime.
 
-- `.env.development` - Development environment configuration
-- `.env.production` - Production environment configuration
-- `discord-activity/.env.development` - Discord Activity development configuration
-- `discord-activity/.env.production` - Discord Activity production configuration
+- `.env` - Main environment configuration file
+- Symbolic link from `discord-activity/.env` to the main `.env` file
 
-Make sure to update these files with your actual credentials before deployment.
+Make sure to update the `.env` file with your actual credentials before deployment. You can use the provided `.env.example` file as a template.
 
 ## Deployment Scripts
 
@@ -40,11 +38,12 @@ chmod +x deploy-dev.sh
 ```
 
 This script will:
-1. Load environment variables from `.env.development`
-2. Build the main Discord bot
-3. Build the Discord Activity component
-4. Start a local Node.js server
-5. Set up a Cloudflare tunnel to expose the local server at `https://discord-dev.zoharbabin.com`
+1. Load environment variables from `.env` file
+2. Set development-specific environment variables
+3. Build the main Discord bot
+4. Build the Discord Activity component
+5. Start a local Node.js server
+6. Set up a Cloudflare tunnel to expose the local server at `https://discord-dev.zoharbabin.com`
 
 ### Production Deployment
 
@@ -59,11 +58,12 @@ chmod +x deploy-prod.sh
 ```
 
 This script will:
-1. Load environment variables from `.env.production`
-2. Run tests to ensure code quality
-3. Build the main Discord bot
-4. Build the Discord Activity component with production optimizations
-5. Deploy the Discord Activity to Cloudflare using Wrangler
+1. Load environment variables from `.env` file
+2. Set production-specific environment variables
+3. Run tests to ensure code quality
+4. Build the main Discord bot
+5. Build the Discord Activity component with production optimizations
+6. Deploy the Discord Activity to Cloudflare using Wrangler
 
 ### Pre-Deployment Testing
 
