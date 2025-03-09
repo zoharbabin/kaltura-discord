@@ -39,7 +39,11 @@ async function init() {
     { prefix: '/kaltura-api', target: 'api.kaltura.com' },
     { prefix: '/kaltura-summary', target: 'summary.nvp1.ovp.kaltura.com' },
     { prefix: '/kaltura-com', target: 'www.kaltura.com' },
-    { prefix: '/kaltura-genie', target: 'genie.nvp1.ovp.kaltura.com' }
+    { prefix: '/kaltura-genie', target: 'genie.nvp1.ovp.kaltura.com' },
+    { prefix: '/kaltura-static', target: 'static.kaltura.com' },
+    { prefix: '/kaltura-unisphere', target: 'unisphere.nvp1.ovp.kaltura.com' },
+    { prefix: '/kaltura-analytics', target: 'analytics.kaltura.com' }
+    
   ]);
   console.log('[DEBUG] URL mappings patched');
   

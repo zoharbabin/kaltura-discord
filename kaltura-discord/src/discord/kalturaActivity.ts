@@ -271,12 +271,12 @@ export async function launchDiscordActivity(
     }
 
     try {
-      // Create a message with instructions while we attempt to launch the activity
+      // Create an enhanced activity card that combines information and launch button
       await interaction.editReply({
-        content: `${interaction.user} is starting a Watch Together activity for **${video.title}**!\n\nJoin voice channel "${voiceChannel.name}" to watch together.`,
+        content: `${interaction.user} is starting a Watch Together activity for **${video.title}**!`,
         embeds: [{
           title: `Watch Together: ${video.title}`,
-          description: "The activity is being launched in your voice channel. Everyone in the channel will be able to watch together.",
+          description: `This activity is being launched in voice channel "${voiceChannel.name}". Click the button below to join and watch together with everyone in the channel.`,
           color: 0x00B171, // Kaltura green
           image: {
             url: video.thumbnailUrl
@@ -284,20 +284,13 @@ export async function launchDiscordActivity(
           footer: {
             text: `Kaltura Video • ID: ${video.id}`
           }
-        }]
-      });
-
-      // Use Discord's built-in activity launching mechanism
-      // For Discord Activities, we need to provide a button that links to the activity
-      // Discord will handle launching the activity in the client when clicked
-      await interaction.followUp({
-        content: `Click the button below to join the Watch Together activity in voice channel "${voiceChannel.name}"`,
+        }],
         components: [{
           type: 1, // Action Row
           components: [{
             type: 2, // Button
             style: 5, // Link button
-            label: '🎬 Join Watch Together Activity',
+            label: '🎬 Launch Watch Together',
             // Use the standard HTTPS URL for the activity
             url: activityUrl
           }]
@@ -306,15 +299,26 @@ export async function launchDiscordActivity(
     } catch (activityError) {
       logger.error('Error launching Discord Activity directly', { activityError, videoId });
       
-      // Fallback to the standard URL
-      await interaction.followUp({
-        content: 'Unable to launch the activity directly. Please use this link:',
+      // Fallback with an enhanced error message in the same format
+      await interaction.editReply({
+        content: `${interaction.user} is starting a Watch Together activity for **${video.title}**!`,
+        embeds: [{
+          title: `Watch Together: ${video.title}`,
+          description: `Unable to launch the activity directly. Click the button below to join the Watch Together activity in voice channel "${voiceChannel.name}".`,
+          color: 0x00B171, // Kaltura green
+          image: {
+            url: video.thumbnailUrl
+          },
+          footer: {
+            text: `Kaltura Video • ID: ${video.id}`
+          }
+        }],
         components: [{
           type: 1, // Action Row
           components: [{
             type: 2, // Button
             style: 5, // Link
-            label: '🎬 Launch Watch Together Activity',
+            label: '🎬 Launch Watch Together',
             url: activityUrl
           }]
         }]
