@@ -303,6 +303,8 @@ async function init() {
     
     // Try to parse metadata parameter which contains JSON with video info
     const metadataStr = urlParams.get('metadata');
+    let userFromMetadata = null;
+    
     if (metadataStr) {
       try {
         const metadata = JSON.parse(decodeURIComponent(metadataStr));
@@ -313,6 +315,13 @@ async function init() {
         partnerId = metadata.partnerId || null;
         uiconfId = metadata.uiconfId || null;
         creatorId = metadata.creatorId || null;
+        
+        // Extract creator ID if available
+        if (metadata.creatorId) {
+          // Update current user ID if we have a valid creator ID
+          currentUserId = metadata.creatorId;
+          console.log('[DEBUG] Updated current user ID from creator ID:', currentUserId);
+        }
       } catch (e) {
         console.error('[DEBUG] Failed to parse metadata:', e);
       }
@@ -355,11 +364,24 @@ async function init() {
     }
     
     // Determine if we're the host
-    // For now, the user who launched the activity is the host
-    // In a real implementation, this would be stored in Discord's activity state
-    isHost = currentUserId === creatorId;
-    hostId = creatorId || currentUserId;
-    console.log('[DEBUG] Host determination:', { isHost, hostId, creatorId });
+    // The user who launched the activity is the host
+    // If we have a valid creatorId and it matches our currentUserId, we're the host
+    if (creatorId && currentUserId) {
+      isHost = currentUserId === creatorId;
+      hostId = creatorId;
+    } else {
+      // Fallback: if we don't have a valid creatorId, the first user becomes the host
+      isHost = true;
+      hostId = currentUserId;
+    }
+    
+    console.log('[DEBUG] Host determination:', {
+      isHost,
+      hostId,
+      creatorId,
+      currentUserId,
+      userFromMetadata: userFromMetadata ? true : false
+    });
     
     // Create the UI
     console.log('[DEBUG] Creating UI');

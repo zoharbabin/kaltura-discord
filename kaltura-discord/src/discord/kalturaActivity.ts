@@ -236,12 +236,12 @@ export async function launchDiscordActivity(
       return;
     }
     
-    // Create metadata for the activity
+    // Create minimal metadata for the activity to stay within Discord's URL length limits
     const metadata = {
       videoId,
       partnerId,
       uiconfId,
-      title: video.title,
+      // Only include essential user information
       creatorId: interaction.user.id
     };
     

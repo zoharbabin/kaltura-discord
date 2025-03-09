@@ -78,25 +78,18 @@ export class KalturaPlayerManager {
           },
         },
         playback: {
-          autoplay: false,
+          autoplay: true,
+          preload: "auto",
           // Prefer progressive format to avoid HLS manifest parsing issues
           streamPriority: [
             {
               engine: 'html5',
               format: 'progressive'
-            },
-            {
-              engine: 'html5',
-              format: 'dash'
-            },
-            {
-              engine: 'html5',
-              format: 'hls'
             }
           ],
           // Disable features that might cause errors
-          features: {
-            airplay: false // Disable airplay to avoid Category:7 | Code:7003 errors
+          plugins: {
+            airplay: { enabled: false } // Disable airplay to avoid Category:7 | Code:7003 errors
           }
         }
       });

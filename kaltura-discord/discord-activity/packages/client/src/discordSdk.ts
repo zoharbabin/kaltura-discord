@@ -508,17 +508,35 @@ export async function initializeDiscordSDK(): Promise<DiscordAuth> {
     // In Discord Activity context, we don't need to authenticate explicitly
     console.log('[DEBUG] In Discord Activity context, using implicit authentication');
     
+    // Check if we have creator ID from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const metadataStr = urlParams.get('metadata');
+    let creatorId = null;
+    
+    if (metadataStr) {
+      try {
+        const metadata = JSON.parse(decodeURIComponent(metadataStr));
+        console.log('[DEBUG] Checking metadata for creator ID:', metadata);
+        
+        // Extract creator ID if available
+        if (metadata.creatorId) {
+          creatorId = metadata.creatorId;
+          console.log('[DEBUG] Found creator ID in metadata:', creatorId);
+        }
+      } catch (e) {
+        console.error('[DEBUG] Failed to parse metadata for creator ID:', e);
+      }
+    }
+    
     // Create a user object based on available information
     let user = {
-      id: discordSdk.channelId ? `user_${discordSdk.channelId}` : 'activity-user',
+      id: creatorId || (discordSdk.channelId ? `user_${discordSdk.channelId}` : 'activity-user'),
       username: 'Activity User',
       discriminator: '0000',
       avatar: ''
     };
     
-    // In Discord Activity, we don't have direct access to user info through the SDK
-    // We'll use the channel ID as a unique identifier if available
-    console.log('[DEBUG] Using activity context information for user identification');
+    console.log('[DEBUG] Using user information for identification:', user);
     
     // Set current user ID based on available information
     currentUserId = user.id;
