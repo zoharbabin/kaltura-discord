@@ -23,6 +23,8 @@ if [ -f .env ]; then
   export NODE_ENV=production
   export DISCORD_ACTIVITY_URL=https://discord.zoharbabin.com
   export PUBLIC_URL=https://discord.zoharbabin.com
+  export API_GATEWAY_URL=https://api.zoharbabin.com
+  export ENABLE_API_GATEWAY=true
 else
   echo "Error: .env file not found"
   echo "Please run ./simplify-env.sh to create a consolidated .env file"
@@ -86,6 +88,10 @@ routes = [
 
 [build]
 command = "pnpm run build:prod"
+
+[vars]
+API_GATEWAY_URL = "https://api.zoharbabin.com"
+ENABLE_API_GATEWAY = "true"
 EOL
 fi
 

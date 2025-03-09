@@ -493,7 +493,8 @@ async function handleEmbedVideo(interaction: ButtonInteraction, videoId: string)
     const uiconfId = uiconfIdMatch ? uiconfIdMatch[1] : '';
     
     // Create iframe embed code
-    const iframeEmbed = `<iframe src="https://cdnapisec.kaltura.com/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}" style="width: 854px; height: 480px" allowfullscreen frameborder="0"></iframe>`;
+    const baseUrl = process.env.PUBLIC_URL || 'https://discord-dev.zoharbabin.com';
+    const iframeEmbed = `<iframe type="text/javascript" src='${baseUrl}/.proxy/kaltura/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}' style="width: 854px; height: 480px" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" frameborder="0"></iframe>`;
     
     // Create JavaScript embed code
     const playerInstanceId = Math.floor(Math.random() * 1000000000);
@@ -606,7 +607,8 @@ async function handleInlineActivity(interaction: ButtonInteraction, videoId: str
     const uiconfId = uiconfIdMatch ? uiconfIdMatch[1] : '';
     
     // Create the iframe embed code for the video
-    const iframeEmbed = `<iframe type="text/javascript" src='https://cdnapisec.kaltura.com/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}' style="width: 854px; height: 480px" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" frameborder="0"></iframe>`;
+    const baseUrl = process.env.PUBLIC_URL || 'https://discord-dev.zoharbabin.com';
+    const iframeEmbed = `<iframe type="text/javascript" src='${baseUrl}/.proxy/kaltura/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}' style="width: 854px; height: 480px" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" frameborder="0"></iframe>`;
     
     // Create components array for buttons
     const components = [];
@@ -737,10 +739,10 @@ async function handleJoinActivity(interaction: ButtonInteraction, videoId: strin
       creatorId: interaction.user.id
     };
     
-    // Get the Discord Activity base URL from environment variable first, then fall back to configuration
-    const activityBaseUrl = getEnv('DISCORD_ACTIVITY_URL', '') ||
-                           config.features?.discordActivityUrl as string ||
-                           'https://discord.com/activities';
+    // For Discord activities to work properly, they must use the specific URL format:
+    // https://discord.com/activities/{applicationId}?metadata={metadata}
+    // This is a special URL that Discord recognizes and handles internally
+    const activityBaseUrl = 'https://discord.com/activities';
     
     // Create the Discord Activity URL
     const activityUrl = `${activityBaseUrl}/${applicationId}?metadata=${encodeURIComponent(JSON.stringify(metadata))}`;
@@ -832,7 +834,8 @@ async function handleWatchTogether(interaction: ButtonInteraction, videoId: stri
     const uiconfId = getEnv('KALTURA_PLAYER_ID', '46022343');
     
     // Create the Kaltura iframe URL which serves as an SPA
-    const iframeUrl = `https://cdnapisec.kaltura.com/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}`;
+    const baseUrl = process.env.PUBLIC_URL || 'https://discord-dev.zoharbabin.com';
+    const iframeUrl = `${baseUrl}/.proxy/kaltura/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}`;
     
     // Create a URL to our custom HTML page with the necessary parameters
     const watchTogetherUrl = new URL(`${process.env.PUBLIC_URL || 'http://localhost:3000'}/public/watch-together.html`);

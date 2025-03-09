@@ -8,6 +8,7 @@ import express, {
 } from 'express';
 import { fetchAndRetry } from './utils';
 import { KalturaService } from './services/kalturaService';
+import { apiClient } from './services/apiClient';
 
 // Load environment variables based on NODE_ENV
 const nodeEnv = process.env.NODE_ENV || 'development';
@@ -16,8 +17,12 @@ dotenv.config({ path: `../../.env.${nodeEnv}` });
 const app: Application = express();
 const port: number = Number(process.env.PORT) || 3001;
 
-// Initialize Kaltura service
-const kalturaService = new KalturaService(process.env.VITE_KALTURA_API_ENDPOINT);
+// Initialize API client with API Gateway URL
+const apiGatewayUrl = process.env.API_GATEWAY_URL || 'http://localhost:3000/api';
+console.log(`Using API Gateway at: ${apiGatewayUrl}`);
+
+// Initialize Kaltura service with API client
+const kalturaService = new KalturaService(process.env.VITE_KALTURA_API_ENDPOINT, apiClient);
 
 // Middleware
 app.use(express.json());
@@ -36,11 +41,20 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '../../client/dist');
-  app.use(express.static(clientBuildPath));
-}
+// Serve static files in all environments
+const clientBuildPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientBuildPath));
+
+// For SPA routing, serve index.html for any unmatched routes
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Serve index.html for all other routes
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
 
 // Error handler middleware
 const errorHandler = (err: Error, req: Request, res: Response, next: express.NextFunction) => {
@@ -54,6 +68,15 @@ const errorHandler = (err: Error, req: Request, res: Response, next: express.Nex
 // Fetch token from Discord and return to the embedded app
 const tokenHandler: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Exchange Discord code for token
+    const { code } = req.body;
+    
+    if (!code) {
+      res.status(400).json({ error: 'Authorization code is required' });
+      return;
+    }
+    
+    // Exchange code for Discord token
     const response = await fetchAndRetry('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: {
@@ -63,10 +86,10 @@ const tokenHandler: RequestHandler = async (req: Request, res: Response): Promis
         client_id: process.env.VITE_CLIENT_ID || '',
         client_secret: process.env.CLIENT_SECRET || '',
         grant_type: 'authorization_code',
-        code: req.body.code,
+        code,
       }),
     });
-
+    
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Discord token exchange failed:', errorData);
@@ -76,15 +99,62 @@ const tokenHandler: RequestHandler = async (req: Request, res: Response): Promis
       });
       return;
     }
-
+    
     const { access_token, token_type, expires_in, scope } = (await response.json()) as {
       access_token: string;
       token_type: string;
       expires_in: number;
       scope: string;
     };
-
-    res.send({ access_token, token_type, expires_in, scope });
+    
+    // Get user information from Discord
+    const userResponse = await fetchAndRetry('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${access_token}`
+      }
+    });
+    
+    if (!userResponse.ok) {
+      console.error('Failed to get user information from Discord');
+      res.status(userResponse.status).json({
+        error: 'Failed to get user information'
+      });
+      return;
+    }
+    
+    interface DiscordUser {
+      id: string;
+      username: string;
+      discriminator?: string;
+      avatar?: string;
+      roles?: string[];
+    }
+    
+    const userData = await userResponse.json() as DiscordUser;
+    
+    // Authenticate with API Gateway if enabled
+    let api_token = '';
+    if (process.env.API_GATEWAY_URL && process.env.ENABLE_API_GATEWAY !== 'false') {
+      try {
+        api_token = await kalturaService.authenticate({
+          discordId: userData.id,
+          username: userData.username,
+          roles: userData.roles || []
+        });
+        console.log('API Gateway authentication successful');
+      } catch (apiError) {
+        console.error('API Gateway authentication failed:', apiError);
+        // Continue without API token
+      }
+    }
+    
+    // Return both tokens to the client
+    const responseData: any = { access_token, token_type, expires_in, scope };
+    if (api_token) {
+      responseData.api_token = api_token;
+    }
+    
+    res.send(responseData);
   } catch (error) {
     console.error('Token exchange error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -114,37 +184,34 @@ const sessionHandler: RequestHandler = async (req: Request, res: Response): Prom
       return;
     }
     
-    // For development/testing, use a mock KS if we're using placeholder credentials
-    if (partnerId === 'your_kaltura_partner_id' || adminSecret === 'your_kaltura_admin_secret') {
-      console.log('Using mock KS for development/testing');
-      const mockKs = `mock_ks_${videoId}_${userId || 'anonymous'}_${Date.now()}`;
-      res.send({ ks: mockKs });
-      return;
-    }
-    
     try {
-      // Generate a real Kaltura session
+      // Generate a Kaltura session using the updated KalturaService
+      // This will use the API Gateway if enabled, or fall back to direct Kaltura API
       const ks = await kalturaService.generateSession({
         partnerId,
         adminSecret,
         userId: userId || 'anonymous',
         type: 0, // USER session
-        privileges: `sview:${videoId}` // Add privileges to view this specific entry
+        privileges: `sview:${videoId}`, // Add privileges to view this specific entry
+        entryId: videoId // Pass the entry ID for API Gateway
       });
       
       res.send({ ks });
-    } catch (ksError) {
-      console.error('KS generation error:', ksError);
+    } catch (error) {
+      console.error('KS generation error:', error);
       
-      // Provide a mock KS for development/testing if real API fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Falling back to mock KS for development');
-        const mockKs = `mock_ks_${videoId}_${userId || 'anonymous'}_${Date.now()}`;
-        res.send({ ks: mockKs });
-        return;
+      // Error is already handled in KalturaService with fallbacks for development
+      if (error instanceof Error) {
+        res.status(500).json({
+          error: 'Failed to generate Kaltura session',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to generate Kaltura session',
+          message: 'Unknown error'
+        });
       }
-      
-      throw ksError;
     }
   } catch (error) {
     console.error('KS generation error:', error);
@@ -178,56 +245,58 @@ const videoHandler: RequestHandler = async (req: Request, res: Response): Promis
       return;
     }
     
-    // For development/testing, use mock video details if we're using placeholder credentials
-    if (partnerId === 'your_kaltura_partner_id' || adminSecret === 'your_kaltura_admin_secret') {
-      console.log('Using mock video details for development/testing');
-      const mockVideo = {
-        id: videoId,
-        title: `Sample Video (${videoId})`,
-        description: 'This is a sample video for development and testing purposes.',
-        duration: 120, // 2 minutes
-        thumbnailUrl: 'https://via.placeholder.com/640x360?text=Sample+Video',
-        partnerId: partnerId,
-        createdAt: new Date().toISOString(),
-        views: 100
-      };
-      res.send(mockVideo);
-      return;
-    }
-    
     try {
-      // Generate an admin KS for API access
+      // Try to get video details using the API Gateway first
+      if (process.env.API_GATEWAY_URL && process.env.ENABLE_API_GATEWAY !== 'false') {
+        try {
+          console.log('Using API Gateway for video details');
+          const video = await kalturaService.getVideoDetails(videoId);
+          res.send(video);
+          return;
+        } catch (apiError) {
+          console.error('API Gateway video details retrieval failed:', apiError);
+          console.log('Falling back to direct Kaltura API');
+          // Continue to direct API approach
+        }
+      }
+      
+      // Generate an admin KS for direct API access
       const adminKs = await kalturaService.generateSession({
         partnerId,
         adminSecret,
         type: 2, // ADMIN session
+        entryId: videoId
       });
       
-      // Get real video details
+      // Get video details
       const video = await kalturaService.getVideoDetails(videoId, adminKs);
       
-      res.send(video);
-    } catch (videoError) {
-      console.error('Video details API error:', videoError);
-      
-      // Provide mock video details for development/testing if real API fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Falling back to mock video details for development');
-        const mockVideo = {
-          id: videoId,
-          title: `Sample Video (${videoId})`,
-          description: 'This is a sample video for development and testing purposes.',
-          duration: 120, // 2 minutes
-          thumbnailUrl: 'https://via.placeholder.com/640x360?text=Sample+Video',
-          partnerId: partnerId,
-          createdAt: new Date().toISOString(),
-          views: 100
-        };
-        res.send(mockVideo);
-        return;
+      // Add play URL if not already present
+      if (!video.playUrl) {
+        try {
+          video.playUrl = await kalturaService.generatePlayUrl(videoId);
+        } catch (playUrlError) {
+          console.error('Failed to generate play URL:', playUrlError);
+          // Continue without play URL
+        }
       }
       
-      throw videoError;
+      res.send(video);
+    } catch (error) {
+      console.error('Video details error:', error);
+      
+      // Error handling is already implemented in KalturaService with fallbacks for development
+      if (error instanceof Error) {
+        res.status(500).json({
+          error: 'Failed to get video details',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to get video details',
+          message: 'Unknown error'
+        });
+      }
     }
   } catch (error) {
     console.error('Video details error:', error);
@@ -263,25 +332,22 @@ const searchVideosHandler: RequestHandler = async (req: Request, res: Response):
       return;
     }
     
-    // For development/testing, use mock videos if we're using placeholder credentials
-    if (partnerId === 'your_kaltura_partner_id' || adminSecret === 'your_kaltura_admin_secret') {
-      console.log('Using mock videos for development/testing');
-      const mockVideos = Array.from({ length: 5 }, (_, i) => ({
-        id: `mock_video_${i + 1}`,
-        title: `Sample Video ${i + 1} - "${query}"`,
-        description: `This is a sample video ${i + 1} for development and testing purposes.`,
-        duration: 60 + i * 30, // 1-3 minutes
-        thumbnailUrl: `https://via.placeholder.com/640x360?text=Sample+Video+${i + 1}`,
-        partnerId: partnerId,
-        createdAt: new Date().toISOString(),
-        views: 100 + i * 25
-      }));
-      res.send({ videos: mockVideos, page, pageSize, totalCount: mockVideos.length });
-      return;
-    }
-    
     try {
-      // Generate an admin KS for API access
+      // Try to search videos using the API Gateway first
+      if (process.env.API_GATEWAY_URL && process.env.ENABLE_API_GATEWAY !== 'false') {
+        try {
+          console.log('Using API Gateway for video search');
+          const videos = await kalturaService.searchVideos(query);
+          res.send({ videos, page, pageSize, totalCount: videos.length });
+          return;
+        } catch (apiError) {
+          console.error('API Gateway video search failed:', apiError);
+          console.log('Falling back to direct Kaltura API');
+          // Continue to direct API approach
+        }
+      }
+      
+      // Generate an admin KS for direct API access
       const adminKs = await kalturaService.generateSession({
         partnerId,
         adminSecret,
@@ -289,30 +355,36 @@ const searchVideosHandler: RequestHandler = async (req: Request, res: Response):
       });
       
       // Search videos
-      const videos = await kalturaService.searchVideos(adminKs, query, pageSize, page);
+      const videos = await kalturaService.searchVideos(query, adminKs, pageSize, page);
       
-      res.send({ videos, page, pageSize, totalCount: videos.length });
-    } catch (searchError) {
-      console.error('Video search API error:', searchError);
-      
-      // Provide mock videos for development/testing if real API fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Falling back to mock videos for development');
-        const mockVideos = Array.from({ length: 5 }, (_, i) => ({
-          id: `mock_video_${i + 1}`,
-          title: `Sample Video ${i + 1} - "${query}"`,
-          description: `This is a sample video ${i + 1} for development and testing purposes.`,
-          duration: 60 + i * 30, // 1-3 minutes
-          thumbnailUrl: `https://via.placeholder.com/640x360?text=Sample+Video+${i + 1}`,
-          partnerId: partnerId,
-          createdAt: new Date().toISOString(),
-          views: 100 + i * 25
-        }));
-        res.send({ videos: mockVideos, page, pageSize, totalCount: mockVideos.length });
-        return;
+      // Add play URLs if not already present
+      for (const video of videos) {
+        if (!video.playUrl) {
+          try {
+            video.playUrl = await kalturaService.generatePlayUrl(video.id);
+          } catch (playUrlError) {
+            console.error(`Failed to generate play URL for video ${video.id}:`, playUrlError);
+            // Continue without play URL
+          }
+        }
       }
       
-      throw searchError;
+      res.send({ videos, page, pageSize, totalCount: videos.length });
+    } catch (error) {
+      console.error('Video search error:', error);
+      
+      // Error handling is already implemented in KalturaService with fallbacks for development
+      if (error instanceof Error) {
+        res.status(500).json({
+          error: 'Failed to search videos',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to search videos',
+          message: 'Unknown error'
+        });
+      }
     }
   } catch (error) {
     console.error('Video search error:', error);
@@ -342,25 +414,22 @@ const listVideosHandler: RequestHandler = async (req: Request, res: Response): P
       return;
     }
     
-    // For development/testing, use mock videos if we're using placeholder credentials
-    if (partnerId === 'your_kaltura_partner_id' || adminSecret === 'your_kaltura_admin_secret') {
-      console.log('Using mock videos for development/testing');
-      const mockVideos = Array.from({ length: 10 }, (_, i) => ({
-        id: `mock_video_${i + 1}`,
-        title: `Sample Video ${i + 1}`,
-        description: `This is a sample video ${i + 1} for development and testing purposes.`,
-        duration: 60 + i * 30, // 1-5 minutes
-        thumbnailUrl: `https://via.placeholder.com/640x360?text=Sample+Video+${i + 1}`,
-        partnerId: partnerId,
-        createdAt: new Date(Date.now() - i * 86400000).toISOString(), // Staggered dates
-        views: 100 + i * 50
-      }));
-      res.send({ videos: mockVideos, page, pageSize, totalCount: mockVideos.length });
-      return;
-    }
-    
     try {
-      // Generate an admin KS for API access
+      // Try to list videos using the API Gateway first
+      if (process.env.API_GATEWAY_URL && process.env.ENABLE_API_GATEWAY !== 'false') {
+        try {
+          console.log('Using API Gateway for video listing');
+          const videos = await kalturaService.listVideos(undefined, pageSize, page);
+          res.send({ videos, page, pageSize, totalCount: videos.length });
+          return;
+        } catch (apiError) {
+          console.error('API Gateway video listing failed:', apiError);
+          console.log('Falling back to direct Kaltura API');
+          // Continue to direct API approach
+        }
+      }
+      
+      // Generate an admin KS for direct API access
       const adminKs = await kalturaService.generateSession({
         partnerId,
         adminSecret,
@@ -370,28 +439,34 @@ const listVideosHandler: RequestHandler = async (req: Request, res: Response): P
       // List videos
       const videos = await kalturaService.listVideos(adminKs, pageSize, page);
       
-      res.send({ videos, page, pageSize, totalCount: videos.length });
-    } catch (listError) {
-      console.error('Video list API error:', listError);
-      
-      // Provide mock videos for development/testing if real API fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Falling back to mock videos for development');
-        const mockVideos = Array.from({ length: 10 }, (_, i) => ({
-          id: `mock_video_${i + 1}`,
-          title: `Sample Video ${i + 1}`,
-          description: `This is a sample video ${i + 1} for development and testing purposes.`,
-          duration: 60 + i * 30, // 1-5 minutes
-          thumbnailUrl: `https://via.placeholder.com/640x360?text=Sample+Video+${i + 1}`,
-          partnerId: partnerId,
-          createdAt: new Date(Date.now() - i * 86400000).toISOString(), // Staggered dates
-          views: 100 + i * 50
-        }));
-        res.send({ videos: mockVideos, page, pageSize, totalCount: mockVideos.length });
-        return;
+      // Add play URLs if not already present
+      for (const video of videos) {
+        if (!video.playUrl) {
+          try {
+            video.playUrl = await kalturaService.generatePlayUrl(video.id);
+          } catch (playUrlError) {
+            console.error(`Failed to generate play URL for video ${video.id}:`, playUrlError);
+            // Continue without play URL
+          }
+        }
       }
       
-      throw listError;
+      res.send({ videos, page, pageSize, totalCount: videos.length });
+    } catch (error) {
+      console.error('Video list error:', error);
+      
+      // Error handling is already implemented in KalturaService with fallbacks for development
+      if (error instanceof Error) {
+        res.status(500).json({
+          error: 'Failed to list videos',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to list videos',
+          message: 'Unknown error'
+        });
+      }
     }
   } catch (error) {
     console.error('Video list error:', error);
@@ -411,10 +486,50 @@ const healthHandler: RequestHandler = (_req: Request, res: Response): void => {
   });
 };
 
+// Generate play URL for a video
+const playUrlHandler: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { videoId } = req.params;
+    
+    if (!videoId) {
+      res.status(400).json({ error: 'videoId is required' });
+      return;
+    }
+    
+    try {
+      // Generate play URL using the KalturaService
+      const playUrl = await kalturaService.generatePlayUrl(videoId);
+      res.send({ playUrl });
+    } catch (error) {
+      console.error('Play URL generation error:', error);
+      
+      // Error handling is already implemented in KalturaService with fallbacks for development
+      if (error instanceof Error) {
+        res.status(500).json({
+          error: 'Failed to generate play URL',
+          message: error.message
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to generate play URL',
+          message: 'Unknown error'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Play URL generation error:', error);
+    res.status(500).json({
+      error: 'Failed to generate play URL',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 // Register routes
 app.post('/api/token', tokenHandler);
 app.post('/api/kaltura/session', sessionHandler);
 app.get('/api/kaltura/video/:videoId', videoHandler);
+app.post('/api/kaltura/video/:videoId/play', playUrlHandler);
 app.get('/api/kaltura/videos/search', searchVideosHandler);
 app.get('/api/kaltura/videos', listVideosHandler);
 app.get('/api/health', healthHandler);

@@ -102,48 +102,36 @@ if ! command -v jq &> /dev/null; then
   exit 1
 fi
 
-# Test 1: Health endpoint
-print_header "Testing Health Endpoint"
-call_api "GET" "/api/health" "" "" "Health check"
+# Test 1: Health endpoints
+print_header "Testing Health Endpoints"
+call_api "GET" "/health" "" "" "Basic health check"
+call_api "GET" "/api/health" "" "" "API health check"
+call_api "GET" "/api/gateway/health" "" "" "API Gateway health check"
 
 # Test 2: Generate authentication token
 print_header "Testing Authentication Endpoints"
-call_api "POST" "/api/token" "Content-Type: application/json" \
-  '{"code": "test_code"}' \
-  "Generate Discord token (expected to fail with test code)"
+call_api "POST" "/api/auth/token" "Content-Type: application/json" \
+  '{"discordId": "test_user", "username": "Test User", "roles": ["user"]}' \
+  "Generate authentication token"
 
-# Extract access_token using jq
-TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+# Extract token using jq
+TOKEN=$(echo "$RESPONSE" | jq -r '.token')
 
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
-  print_success "Discord token received: ${TOKEN:0:20}..."
+  print_success "Authentication token received: ${TOKEN:0:20}..."
   AUTH_HEADER="Authorization: Bearer $TOKEN"
 else
-  print_info "Expected error: The 'invalid_client' error is normal when testing with a dummy code"
-  print_info "In a real scenario, this endpoint requires a valid Discord OAuth2 authorization code"
+  print_info "Could not extract token from response, using fallback token"
   # Continue anyway for testing other endpoints
-  TOKEN="test_token"
+  # Create a properly formatted JWT token for testing
+  TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNjb3JkSWQiOiJ0ZXN0X3VzZXIiLCJrYWx0dXJhVXNlcklkIjoidGVzdF91c2VyIiwiaWF0IjoxNjE2MTYyMDAwLCJleHAiOjk5OTk5OTk5OTl9.test_signature"
   AUTH_HEADER="Authorization: Bearer $TOKEN"
 fi
 
-# Test 3: Generate Kaltura session
-call_api "POST" "/api/kaltura/session" "Content-Type: application/json" \
-  '{"videoId": "1_noembdcg", "userId": "test_user"}' \
-  "Generate Kaltura session"
 
-# Extract KS using jq
-KS=$(echo "$RESPONSE" | jq -r '.ks')
-
-if [ -n "$KS" ] && [ "$KS" != "null" ]; then
-  print_success "Kaltura session received: ${KS:0:20}..."
-else
-  print_info "Could not extract Kaltura session, using default for subsequent tests"
-  KS="test_ks"
-fi
-
-# Test 5: Get video details
+# Test 3: Get video details
 print_header "Testing Video Endpoints"
-call_api "GET" "/api/kaltura/video/1_noembdcg" "$AUTH_HEADER" "" \
+call_api "GET" "/api/videos/1_noembdcg" "$AUTH_HEADER" "" \
   "Get video details for ID: 1_noembdcg"
 
 # Extract video ID using jq
@@ -156,15 +144,45 @@ else
   VIDEO_ID="1_noembdcg"
 fi
 
-# Test 6: List all videos
-call_api "GET" "/api/kaltura/videos" "$AUTH_HEADER" "" \
+# Test 4: List all videos
+call_api "GET" "/api/videos" "$AUTH_HEADER" "" \
   "List all videos"
 
-# Test 7: Search videos
-call_api "GET" "/api/kaltura/videos/search?query=test" "$AUTH_HEADER" "" \
+# Test 5: Search videos
+call_api "GET" "/api/videos/search?query=test" "$AUTH_HEADER" "" \
   "Search for videos with query 'test'"
 
-# No additional video endpoints to test
+# Test 6: Generate play URL for a video
+call_api "POST" "/api/videos/1_noembdcg/play" "$AUTH_HEADER" "" \
+  "Generate play URL for video ID: 1_noembdcg"
+
+# Test 7: User presence features
+print_header "Testing User Presence Features"
+call_api "GET" "/api/presence/users" "$AUTH_HEADER" "" "Get all user presences"
+
+# Test 8: User presence update
+call_api "POST" "/api/presence/update" "$AUTH_HEADER" \
+  '{"status": "active", "playbackState": {"isPlaying": true, "currentTime": 120}}' \
+  "Update user presence"
+
+# Test 9: Network quality update
+call_api "POST" "/api/presence/network" "$AUTH_HEADER" \
+  '{"userId": "test_user", "quality": "good"}' \
+  "Update network quality"
+
+# Test 10: Synchronization features
+print_header "Testing Synchronization Features"
+call_api "POST" "/api/sync/request" "$AUTH_HEADER" \
+  '{"requesterId": "test_user"}' \
+  "Request synchronization"
+
+# Test 11: Broadcast playback state
+call_api "POST" "/api/sync/broadcast" "$AUTH_HEADER" \
+  '{"playbackState": {"isPlaying": true, "currentTime": 120, "timestamp": '"$(date +%s)"'}}' \
+  "Broadcast playback state"
+
+# Test 12: Get sync metrics
+call_api "GET" "/api/sync/metrics" "$AUTH_HEADER" "" "Get synchronization metrics"
 
 # Summary
 print_header "Test Summary"

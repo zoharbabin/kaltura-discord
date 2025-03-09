@@ -22,7 +22,9 @@ if [ -f .env ]; then
   # Set development-specific environment variables
   export NODE_ENV=development
   export DISCORD_ACTIVITY_URL=https://discord-dev.zoharbabin.com
-  export PUBLIC_URL=http://localhost:3000
+  export PUBLIC_URL=https://discord-dev.zoharbabin.com
+  export API_GATEWAY_URL=https://discord-dev.zoharbabin.com/api
+  export ENABLE_API_GATEWAY=true
 else
   echo "Error: .env file not found"
   echo "Please run ./simplify-env.sh to create a consolidated .env file"
@@ -54,7 +56,7 @@ MAIN_SERVER_PID=$!
 echo "Starting Discord Activity server..."
 cd discord-activity/packages/server
 npm run build
-NODE_ENV=development PORT=3001 node ./dist/app.js &
+NODE_ENV=development PORT=3001 API_GATEWAY_URL=$API_GATEWAY_URL ENABLE_API_GATEWAY=$ENABLE_API_GATEWAY node ./dist/app.js &
 ACTIVITY_SERVER_PID=$!
 cd ../../..
 
@@ -189,8 +191,8 @@ else
 fi
 
 # Wait for DNS propagation
-echo "Waiting for DNS propagation (30 seconds)..."
-sleep 30
+echo "Waiting for DNS propagation (5 seconds)..."
+sleep 5
 
 # Function to test the domain
 test_domain() {

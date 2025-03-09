@@ -5,6 +5,15 @@ import { kalturaClient, MeetingCreateParams } from './kalturaClient';
 import { userAuthService } from './userAuthService';
 import jwt from 'jsonwebtoken';
 import { getEnv } from '../common/envService';
+import {
+  UserPresence,
+  NetworkQuality,
+  UserStatus,
+  PlaybackState,
+  SyncMetrics,
+  NetworkQualityUpdate,
+  SyncRequest
+} from '../types/userPresence';
 
 // Create Express application
 const app = express();
@@ -78,16 +87,30 @@ export async function startApiGateway(): Promise<void> {
     // Apply CORS middleware
     app.use(corsMiddleware);
     
-    // Health check endpoint
+    // Health check endpoints
     app.get('/health', (req: Request, res: Response) => {
       res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+    
+    app.get('/api/health', (req: Request, res: Response) => {
+      res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+    
+    app.get('/api/gateway/health', (req: Request, res: Response) => {
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        apiGateway: true,
+        version: '1.0.0'
+      });
     });
     
     // API routes
     app.use('/api/meetings', createMeetingRoutes());
     app.use('/api/auth', createAuthRoutes());
     app.use('/api/videos', createVideoRoutes());
-    app.use('/api/kaltura/video', createKalturaVideoRoutes());
+    app.use('/api/presence', createPresenceRoutes());
+    app.use('/api/sync', createSyncRoutes());
     
     // Error handling middleware
     app.use((err: Error, req: Request, res: Response, next: NextFunction): void => {
@@ -348,33 +371,6 @@ function createVideoRoutes() {
   return router;
 }
 
-/**
- * Create Kaltura video routes
- */
-function createKalturaVideoRoutes() {
-  const router = express.Router();
-  
-  // Apply authentication middleware to all Kaltura video routes
-  router.use(authMiddleware as express.RequestHandler);
-  
-  // Get a specific Kaltura video
-  router.get('/:id', async (req: Request, res: Response) => {
-    try {
-      // Get the video ID from the URL
-      const videoId = req.params.id;
-      
-      // Get the video
-      const video = await kalturaClient.getVideo(videoId);
-      
-      res.status(200).json({ video });
-    } catch (error) {
-      logger.error('Error getting Kaltura video', { error, videoId: req.params.id });
-      res.status(500).json({ error: 'Failed to get Kaltura video' });
-    }
-  });
-  
-  return router;
-}
 
 /**
  * Create authentication routes
@@ -483,6 +479,216 @@ function createAuthRoutes() {
     } catch (error) {
       logger.error('Error refreshing token', { error });
       res.status(500).json({ error: 'Failed to refresh token' });
+    }
+  });
+  
+  return router;
+}
+
+/**
+ * Create user presence routes
+ */
+function createPresenceRoutes() {
+  const router = express.Router();
+  
+  // Apply authentication middleware to all presence routes
+  router.use(authMiddleware as express.RequestHandler);
+  
+  // Get all user presences
+  router.get('/users', async (req: Request, res: Response) => {
+    try {
+      // In a real implementation, this would fetch user presences from a database or service
+      // For now, we'll return a mock response
+      const userPresences: UserPresence[] = [
+        {
+          id: 'user1',
+          username: 'User 1',
+          isHost: true,
+          status: 'active',
+          lastActive: Date.now(),
+          networkQuality: 'good',
+          playbackState: {
+            isPlaying: true,
+            currentTime: 120,
+            buffering: false
+          }
+        },
+        {
+          id: 'user2',
+          username: 'User 2',
+          isHost: false,
+          status: 'active',
+          lastActive: Date.now(),
+          networkQuality: 'fair',
+          playbackState: {
+            isPlaying: true,
+            currentTime: 118,
+            buffering: false
+          }
+        }
+      ];
+      
+      res.status(200).json({ userPresences });
+    } catch (error) {
+      logger.error('Error getting user presences', { error });
+      res.status(500).json({ error: 'Failed to get user presences' });
+    }
+  });
+  
+  // Update user presence
+  router.post('/update', async (req: Request, res: Response): Promise<any> => {
+    try {
+      // Get the authenticated user
+      const user = (req as any).user;
+      
+      // Validate request body
+      const { status, playbackState } = req.body as { status: UserStatus, playbackState?: PlaybackState };
+      
+      if (!status) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // In a real implementation, this would update the user's presence in a database or service
+      // For now, we'll just return a success response
+      
+      res.status(200).json({
+        success: true,
+        userId: user.discordId,
+        status,
+        playbackState,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      logger.error('Error updating user presence', { error });
+      res.status(500).json({ error: 'Failed to update user presence' });
+    }
+  });
+  
+  // Update network quality
+  router.post('/network', async (req: Request, res: Response): Promise<any> => {
+    try {
+      // Validate request body
+      const { userId, quality } = req.body as NetworkQualityUpdate;
+      
+      if (!userId || !quality) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      if (!['good', 'fair', 'poor'].includes(quality)) {
+        return res.status(400).json({ error: 'Invalid network quality' });
+      }
+      
+      // In a real implementation, this would update the user's network quality in a database or service
+      // For now, we'll just return a success response
+      
+      res.status(200).json({
+        success: true,
+        userId,
+        quality,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      logger.error('Error updating network quality', { error });
+      res.status(500).json({ error: 'Failed to update network quality' });
+    }
+  });
+  
+  return router;
+}
+
+/**
+ * Create synchronization routes
+ */
+function createSyncRoutes() {
+  const router = express.Router();
+  
+  // Apply authentication middleware to all sync routes
+  router.use(authMiddleware as express.RequestHandler);
+  
+  // Request synchronization
+  router.post('/request', async (req: Request, res: Response): Promise<any> => {
+    try {
+      // Validate request body
+      const { requesterId } = req.body as SyncRequest;
+      
+      if (!requesterId) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // In a real implementation, this would notify the host to send the current playback state
+      // For now, we'll just return a success response with a mock playback state
+      
+      res.status(200).json({
+        success: true,
+        requesterId,
+        hostId: 'host1',
+        playbackState: {
+          isPlaying: true,
+          currentTime: 120,
+          timestamp: Date.now()
+        }
+      });
+    } catch (error) {
+      logger.error('Error requesting synchronization', { error });
+      res.status(500).json({ error: 'Failed to request synchronization' });
+    }
+  });
+  
+  // Broadcast playback state
+  router.post('/broadcast', async (req: Request, res: Response): Promise<any> => {
+    try {
+      // Get the authenticated user
+      const user = (req as any).user;
+      
+      // Validate request body
+      const { playbackState } = req.body as { playbackState: PlaybackState };
+      
+      if (!playbackState) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // In a real implementation, this would broadcast the playback state to all participants
+      // For now, we'll just return a success response
+      
+      res.status(200).json({
+        success: true,
+        hostId: user.discordId,
+        playbackState,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      logger.error('Error broadcasting playback state', { error });
+      res.status(500).json({ error: 'Failed to broadcast playback state' });
+    }
+  });
+  
+  // Get sync metrics
+  router.get('/metrics', async (req: Request, res: Response) => {
+    try {
+      // In a real implementation, this would fetch sync metrics from a database or service
+      // For now, we'll return a mock response
+      const syncMetrics = {
+        averageSyncDelta: 0.5,
+        syncAttempts: 10,
+        syncSuccesses: 9,
+        userMetrics: [
+          {
+            userId: 'user1',
+            averageSyncDelta: 0.2,
+            networkQuality: 'good' as NetworkQuality
+          },
+          {
+            userId: 'user2',
+            averageSyncDelta: 0.8,
+            networkQuality: 'fair' as NetworkQuality
+          }
+        ]
+      };
+      
+      res.status(200).json({ syncMetrics });
+    } catch (error) {
+      logger.error('Error getting sync metrics', { error });
+      res.status(500).json({ error: 'Failed to get sync metrics' });
     }
   });
   

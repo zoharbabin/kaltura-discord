@@ -44,7 +44,7 @@ export class KalturaPlayerManager {
         });
       }
       
-      // Load Kaltura Player script if not already loaded
+      // Load Kaltura Player script
       if (!this.scriptLoaded) {
         await this.loadPlayerScript();
         this.scriptLoaded = true;
@@ -65,15 +65,26 @@ export class KalturaPlayerManager {
         uiConfId: this.options.uiconfId
       });
       
+      // For Discord activities, we need to use the proxy for API calls as well
+      // Create a custom provider configuration that uses the proxy
       this.player = (window as any).KalturaPlayer.setup({
         targetId: this.options.targetId,
         provider: {
           partnerId: this.options.partnerId,
           uiConfId: this.options.uiconfId,
+          env: {
+            serviceUrl: '/.proxy/kaltura/api_v3', // Use the proxy for API calls, must end with /api_v3
+            cdnUrl: '/.proxy/kaltura' // Use the proxy for CDN calls
+          },
         },
         playback: {
           autoplay: false,
-          muted: false,
+          streamPriority: [
+            {
+              engine: 'html5',
+              format: 'progressive'
+            }
+          ]
         }
       });
       
@@ -94,7 +105,8 @@ export class KalturaPlayerManager {
         console.log('[DEBUG] Media loaded successfully');
       } catch (mediaError) {
         console.error('[DEBUG] Failed to load media:', mediaError);
-        throw mediaError;
+        // Continue even if media loading fails - the player UI will show an error
+        console.log('[DEBUG] Continuing with player setup despite media loading error');
       }
       
       // Set up event listeners
@@ -117,7 +129,7 @@ export class KalturaPlayerManager {
   }
   
   /**
-   * Load the Kaltura Player script
+   * Load the Kaltura Player script using a more robust approach
    * @returns A promise that resolves when the script is loaded
    */
   private async loadPlayerScript(): Promise<void> {
@@ -126,22 +138,120 @@ export class KalturaPlayerManager {
       uiconfId: this.options.uiconfId
     });
     
+    // Add type definitions for AMD
+    interface WindowWithAMD extends Window {
+      define?: {
+        amd?: any;
+      };
+    }
+    
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      const scriptUrl = `https://cdnapisec.kaltura.com/p/${this.options.partnerId}/embedPlaykitJs/uiconf_id/${this.options.uiconfId}`;
+      // Save original AMD definition to avoid conflicts
+      const windowWithAMD = window as WindowWithAMD;
+      let originalAmd: any = undefined;
+      
+      if (windowWithAMD.define && windowWithAMD.define.amd) {
+        originalAmd = windowWithAMD.define.amd;
+        windowWithAMD.define.amd = undefined;
+      }
+      
+      // For Discord activities, we need to use the proxy URL mapping
+      // In the Discord Developer Portal, add a URL mapping:
+      // PREFIX: /kaltura
+      // TARGET: cdnapisec.kaltura.com
+      const scriptUrl = `/.proxy/kaltura/p/${this.options.partnerId}/embedPlaykitJs/uiconf_id/${this.options.uiconfId}`;
       console.log('[DEBUG] Loading script from URL:', scriptUrl);
       
+      // Add a timeout to detect if the script is taking too long to load
+      const timeoutId = setTimeout(() => {
+        console.error('[DEBUG] Script loading timed out after 30 seconds');
+        
+        // Try to fetch the URL directly to see if there's a network error
+        fetch(scriptUrl)
+          .then(response => {
+            console.log('[DEBUG] Fetch test result:', {
+              ok: response.ok,
+              status: response.status,
+              statusText: response.statusText
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(text => {
+            console.log('[DEBUG] Fetch succeeded, content length:', text.length);
+          })
+          .catch(fetchError => {
+            console.error('[DEBUG] Fetch test failed:', fetchError);
+          });
+        
+        // Restore AMD definition
+        if (originalAmd && windowWithAMD.define) {
+          windowWithAMD.define.amd = originalAmd;
+        }
+        
+        reject(new Error('Script loading timed out after 30 seconds'));
+      }, 30000);
+      
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
       script.src = scriptUrl;
+      
       script.onload = () => {
+        clearTimeout(timeoutId);
         console.log('[DEBUG] Kaltura Player script loaded successfully');
+        
+        // Restore AMD definition
+        if (originalAmd && windowWithAMD.define) {
+          windowWithAMD.define.amd = originalAmd;
+        }
+        
+        // Check if KalturaPlayer is actually defined
+        if (typeof (window as any).KalturaPlayer === 'undefined') {
+          console.error('[DEBUG] Script loaded but KalturaPlayer is not defined');
+          reject(new Error('Script loaded but KalturaPlayer is not defined'));
+          return;
+        }
+        
         resolve();
       };
+      
       script.onerror = (error) => {
+        clearTimeout(timeoutId);
         console.error('[DEBUG] Failed to load Kaltura Player script:', error);
+        
+        // Restore AMD definition
+        if (originalAmd && windowWithAMD.define) {
+          windowWithAMD.define.amd = originalAmd;
+        }
+        
+        // Try to fetch the URL directly to see if there's a network error
+        fetch(scriptUrl)
+          .then(response => {
+            console.log('[DEBUG] Fetch test result:', {
+              ok: response.ok,
+              status: response.status,
+              statusText: response.statusText
+            });
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(text => {
+            console.log('[DEBUG] Fetch succeeded, content length:', text.length);
+          })
+          .catch(fetchError => {
+            console.error('[DEBUG] Fetch test failed:', fetchError);
+          });
+        
         reject(new Error(`Failed to load Kaltura Player script: ${error}`));
       };
-      document.head.appendChild(script);
+      
+      // Append to body instead of head for better compatibility
+      document.body.appendChild(script);
+      console.log('[DEBUG] Script element added to document body');
     });
   }
   
@@ -415,6 +525,7 @@ export class KalturaPlayerManager {
     }
   }
   
+
   /**
    * Destroy the player
    */

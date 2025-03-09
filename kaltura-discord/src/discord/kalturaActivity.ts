@@ -66,7 +66,9 @@ export async function launchKalturaVideoActivity(
     const directPlayUrl = `${embedBaseUrl}${video.id}`;
 
     // Create the Kaltura iframe URL which serves as an SPA.
-    const iframeUrl = `https://cdnapisec.kaltura.com/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}`;
+    // For Discord embeds and components, we need to use absolute URLs with proper schemes
+    const baseUrl = process.env.PUBLIC_URL || 'https://discord-dev.zoharbabin.com';
+    const iframeUrl = `${baseUrl}/.proxy/kaltura/p/${partnerId}/embedPlaykitJs/uiconf_id/${uiconfId}?iframeembed=true&entry_id=${video.id}`;
 
     // Create a rich embed for the video. Update the URL to point to the iframeUrl.
     const videoEmbed = {
@@ -243,10 +245,10 @@ export async function launchDiscordActivity(
       creatorId: interaction.user.id
     };
     
-    // Get the Discord Activity base URL from environment variable first, then fall back to configuration
-    const activityBaseUrl = getEnv('DISCORD_ACTIVITY_URL', '') ||
-                           config.features?.discordActivityUrl as string ||
-                           'https://discord.com/activities';
+    // For Discord activities to work properly, they must use the specific URL format:
+    // https://discord.com/activities/{applicationId}?metadata={metadata}
+    // This is a special URL that Discord recognizes and handles internally
+    const activityBaseUrl = 'https://discord.com/activities';
     
     logger.debug('Using Discord Activity URL', { activityBaseUrl, env: process.env.NODE_ENV });
     

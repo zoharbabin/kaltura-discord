@@ -45,7 +45,8 @@ check_env_files() {
     # Check if the .env file contains required variables
     local required_vars=("DISCORD_BOT_TOKEN" "DISCORD_CLIENT_ID" "DISCORD_CLIENT_SECRET"
                          "KALTURA_PARTNER_ID" "KALTURA_ADMIN_SECRET" "JWT_SECRET"
-                         "DISCORD_APPLICATION_ID" "DISCORD_ACTIVITY_URL")
+                         "DISCORD_APPLICATION_ID" "DISCORD_ACTIVITY_URL"
+                         "API_GATEWAY_URL" "ENABLE_API_GATEWAY")
     
     local missing_vars=0
     for var in "${required_vars[@]}"; do
@@ -316,6 +317,94 @@ check_discord_activity_url() {
     return 1
   fi
 }
+# Check user presence components
+check_user_presence_components() {
+  print_status "yellow" "Checking user presence components..."
+  
+  local presence_issues=0
+  
+  # Check for UserPresence interface
+  if [ -f discord-activity/packages/client/src/types/userPresence.ts ]; then
+    print_status "green" "✓ UserPresence interface file found"
+    
+    # Check for required types
+    if grep -q "NetworkQuality" discord-activity/packages/client/src/types/userPresence.ts; then
+      print_status "green" "✓ NetworkQuality type found"
+    else
+      print_status "yellow" "⚠ NetworkQuality type may be missing"
+      presence_issues=$((presence_issues+1))
+    fi
+    
+    if grep -q "SyncMetrics" discord-activity/packages/client/src/types/userPresence.ts; then
+      print_status "green" "✓ SyncMetrics type found"
+    else
+      print_status "yellow" "⚠ SyncMetrics type may be missing"
+      presence_issues=$((presence_issues+1))
+    fi
+  else
+    print_status "yellow" "⚠ UserPresence interface file not found"
+    presence_issues=$((presence_issues+1))
+  fi
+  
+  # Check for UI components
+  if [ -f discord-activity/packages/client/src/components/NetworkIndicator.ts ]; then
+    print_status "green" "✓ NetworkIndicator component found"
+  else
+    print_status "yellow" "⚠ NetworkIndicator component may be missing"
+    presence_issues=$((presence_issues+1))
+  fi
+  
+  if [ -f discord-activity/packages/client/src/components/UserPresenceDisplay.ts ]; then
+    print_status "green" "✓ UserPresenceDisplay component found"
+  else
+    print_status "yellow" "⚠ UserPresenceDisplay component may be missing"
+    presence_issues=$((presence_issues+1))
+  fi
+  
+  if [ $presence_issues -gt 0 ]; then
+    print_status "yellow" "⚠ $presence_issues potential user presence implementation issues found"
+    return 1
+  else
+    print_status "green" "✓ User presence components check passed"
+    return 0
+  fi
+}
+
+# Check API Gateway integration
+check_api_gateway() {
+  print_status "yellow" "Checking API Gateway integration..."
+  
+  local api_issues=0
+  
+  # Check for API client
+  if [ -f discord-activity/packages/server/src/services/apiClient.ts ]; then
+    print_status "green" "✓ API client found"
+  else
+    print_status "yellow" "⚠ API client may be missing"
+    api_issues=$((api_issues+1))
+  fi
+  
+  # Check for API Gateway integration in KalturaService
+  if [ -f discord-activity/packages/server/src/services/kalturaService.ts ]; then
+    if grep -q "apiClient" discord-activity/packages/server/src/services/kalturaService.ts; then
+      print_status "green" "✓ API Gateway integration found in KalturaService"
+    else
+      print_status "yellow" "⚠ API Gateway integration may be missing in KalturaService"
+      api_issues=$((api_issues+1))
+    fi
+  else
+    print_status "yellow" "⚠ KalturaService file not found"
+    api_issues=$((api_issues+1))
+  fi
+  
+  if [ $api_issues -gt 0 ]; then
+    print_status "yellow" "⚠ $api_issues potential API Gateway integration issues found"
+    return 1
+  else
+    print_status "green" "✓ API Gateway integration check passed"
+    return 0
+  fi
+}
 
 # Main function
 main() {
@@ -335,6 +424,9 @@ main() {
   check_outdated
   check_discord_activity || failed=$((failed+1))
   check_discord_activity_sdk || failed=$((failed+1))
+  check_discord_activity_url || failed=$((failed+1))
+  check_user_presence_components || failed=$((failed+1))
+  check_api_gateway || failed=$((failed+1))
   check_discord_activity_url || failed=$((failed+1))
   
   # Print summary

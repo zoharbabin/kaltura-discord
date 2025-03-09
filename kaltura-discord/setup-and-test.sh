@@ -142,6 +142,8 @@ check_env_var "KALTURA_PARTNER_ID" "kaltura_partner_id"
 check_env_var "KALTURA_ADMIN_SECRET" "kaltura_admin_secret"
 check_env_var "JWT_SECRET" "jwt_secret"
 check_env_var "DISCORD_APPLICATION_ID" "discord_application_id"
+check_env_var "API_GATEWAY_URL" "api_gateway_url"
+check_env_var "ENABLE_API_GATEWAY" "true"
 
 if [ $ENV_ISSUES -eq 1 ]; then
   echo -e "\n${YELLOW}Some environment variables are not properly set.${RESET}"
@@ -222,6 +224,56 @@ if [ "$SKIP_ACTIVITY" != "true" ]; then
         echo -e "${GREEN}Discord Activity built successfully.${RESET}"
       fi
       
+      # Check for user presence implementation
+      echo -e "\n${BOLD}Checking for user presence and synchronization features...${RESET}"
+      
+      # Check for user presence interface
+      if [ -f packages/client/src/types/userPresence.ts ]; then
+        echo -e "${GREEN}User presence interface found.${RESET}"
+        
+        # Check for network quality monitoring
+        if grep -q "NetworkQuality" packages/client/src/types/userPresence.ts; then
+          echo -e "${GREEN}Network quality monitoring found.${RESET}"
+        else
+          echo -e "${YELLOW}Network quality monitoring may be missing.${RESET}"
+          echo -e "${YELLOW}Check for NetworkQuality implementation in types/userPresence.ts${RESET}"
+        fi
+        
+        # Check for synchronization metrics
+        if grep -q "SyncMetrics" packages/client/src/types/userPresence.ts; then
+          echo -e "${GREEN}Synchronization metrics found.${RESET}"
+        else
+          echo -e "${YELLOW}Synchronization metrics may be missing.${RESET}"
+          echo -e "${YELLOW}Check for SyncMetrics implementation in types/userPresence.ts${RESET}"
+        fi
+      else
+        echo -e "${YELLOW}User presence interface file not found.${RESET}"
+        echo -e "${YELLOW}Check for UserPresence implementation in types/userPresence.ts${RESET}"
+      fi
+      
+      # Check for UI components
+      if [ -f packages/client/src/components/NetworkIndicator.ts ]; then
+        echo -e "${GREEN}NetworkIndicator component found.${RESET}"
+      else
+        echo -e "${YELLOW}NetworkIndicator component may be missing.${RESET}"
+        echo -e "${YELLOW}Check for NetworkIndicator implementation in components/NetworkIndicator.ts${RESET}"
+      fi
+      
+      if [ -f packages/client/src/components/UserPresenceDisplay.ts ]; then
+        echo -e "${GREEN}UserPresenceDisplay component found.${RESET}"
+      else
+        echo -e "${YELLOW}UserPresenceDisplay component may be missing.${RESET}"
+        echo -e "${YELLOW}Check for UserPresenceDisplay implementation in components/UserPresenceDisplay.ts${RESET}"
+      fi
+      
+      # Check for API client
+      if [ -f packages/server/src/services/apiClient.ts ]; then
+        echo -e "${GREEN}API client found.${RESET}"
+      else
+        echo -e "${YELLOW}API client may be missing.${RESET}"
+        echo -e "${YELLOW}Check for API client implementation in services/apiClient.ts${RESET}"
+      fi
+      
       cd ..
     fi
     
@@ -268,6 +320,16 @@ EOF
         fi
         
         echo -e "${GREEN}Discord Activity enabled for server $SERVER_ID.${RESET}"
+        
+        # Provide instructions for Discord App Activity URL Mapping
+        echo -e "\n${BOLD}Important: Discord App Activity URL Mapping${RESET}"
+        echo -e "${YELLOW}You must add the following domains to your Discord App Activity URL Mapping:${RESET}"
+        echo -e "1. Go to ${BLUE}https://discord.com/developers/applications/$DISCORD_APP_ID/embedded/url-mappings${RESET}"
+        echo -e "2. Add the following URL mappings:"
+        echo -e "   - ${GREEN}discord-dev.zoharbabin.com${RESET} (for development)"
+        echo -e "   - ${GREEN}discord.zoharbabin.com${RESET} (for production)"
+        echo -e "3. Save your changes"
+        echo -e "${YELLOW}Without these URL mappings, the Discord Activity will not work properly.${RESET}"
       else
         echo -e "${YELLOW}No server ID provided. Skipping configuration.${RESET}"
       fi
