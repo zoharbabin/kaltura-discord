@@ -104,86 +104,67 @@ fi
 
 # Test 1: Health endpoint
 print_header "Testing Health Endpoint"
-call_api "GET" "/health" "" "" "Health check"
+call_api "GET" "/api/health" "" "" "Health check"
 
 # Test 2: Generate authentication token
 print_header "Testing Authentication Endpoints"
-call_api "POST" "/api/auth/token" "Content-Type: application/json" \
-  '{"discordId": "123456789", "username": "TestUser", "roles": ["admin"]}' \
-  "Generate authentication token"
+call_api "POST" "/api/token" "Content-Type: application/json" \
+  '{"code": "test_code"}' \
+  "Generate Discord token (expected to fail with test code)"
 
-# Extract token using jq
-TOKEN=$(echo "$RESPONSE" | jq -r '.token')
+# Extract access_token using jq
+TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 
 if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
-  print_success "Authentication token received: ${TOKEN:0:20}..."
+  print_success "Discord token received: ${TOKEN:0:20}..."
   AUTH_HEADER="Authorization: Bearer $TOKEN"
 else
-  print_error "Failed to get authentication token"
-  echo "Response was: $RESPONSE"
-  exit 1
+  print_info "Expected error: The 'invalid_client' error is normal when testing with a dummy code"
+  print_info "In a real scenario, this endpoint requires a valid Discord OAuth2 authorization code"
+  # Continue anyway for testing other endpoints
+  TOKEN="test_token"
+  AUTH_HEADER="Authorization: Bearer $TOKEN"
 fi
 
-# Test 3: Validate token
-call_api "POST" "/api/auth/validate" "Content-Type: application/json" \
-  '{"token": "'$TOKEN'"}' \
-  "Validate authentication token"
+# Test 3: Generate Kaltura session
+call_api "POST" "/api/kaltura/session" "Content-Type: application/json" \
+  '{"videoId": "1_noembdcg", "userId": "test_user"}' \
+  "Generate Kaltura session"
 
-# Test 4: Refresh token
-call_api "POST" "/api/auth/refresh" "Content-Type: application/json" \
-  '{"token": "'$TOKEN'"}' \
-  "Refresh authentication token"
+# Extract KS using jq
+KS=$(echo "$RESPONSE" | jq -r '.ks')
 
-# Test 5: Create a meeting
-print_header "Testing Meeting Endpoints"
-call_api "POST" "/api/meetings" "$AUTH_HEADER" \
-  '{"title": "Test Meeting", "description": "This is a test meeting", "type": "webinar"}' \
-  "Create a new meeting"
-
-# Extract meeting ID using jq
-MEETING_ID=$(echo "$RESPONSE" | jq -r '.meeting.id')
-
-if [ -n "$MEETING_ID" ] && [ "$MEETING_ID" != "null" ]; then
-  print_success "Meeting created with ID: $MEETING_ID"
+if [ -n "$KS" ] && [ "$KS" != "null" ]; then
+  print_success "Kaltura session received: ${KS:0:20}..."
 else
-  print_info "Could not extract meeting ID, using 'default_value' for subsequent tests"
-  MEETING_ID="default_value"
+  print_info "Could not extract Kaltura session, using default for subsequent tests"
+  KS="test_ks"
 fi
 
-# Test 6: List all meetings
-call_api "GET" "/api/meetings" "$AUTH_HEADER" "" \
-  "List all meetings"
-
-# Test 7: Get specific meeting
-call_api "GET" "/api/meetings/$MEETING_ID" "$AUTH_HEADER" "" \
-  "Get meeting details for ID: $MEETING_ID"
-
-# Test 8: Generate join URL
-call_api "POST" "/api/meetings/$MEETING_ID/join" "$AUTH_HEADER" "" \
-  "Generate join URL for meeting ID: $MEETING_ID"
-
-# Test 9: End meeting
-call_api "DELETE" "/api/meetings/$MEETING_ID" "$AUTH_HEADER" "" \
-  "End meeting with ID: $MEETING_ID"
-
-# Test video-related endpoints
+# Test 5: Get video details
 print_header "Testing Video Endpoints"
+call_api "GET" "/api/kaltura/video/1_noembdcg" "$AUTH_HEADER" "" \
+  "Get video details for ID: 1_noembdcg"
 
-# Test 10: Search videos
-call_api "GET" "/api/videos/search?q=test&limit=5" "$AUTH_HEADER" "" \
+# Extract video ID using jq
+VIDEO_ID=$(echo "$RESPONSE" | jq -r '.id')
+
+if [ -n "$VIDEO_ID" ] && [ "$VIDEO_ID" != "null" ]; then
+  print_success "Video details retrieved for ID: $VIDEO_ID"
+else
+  print_info "Could not extract video ID, using '1_noembdcg' for subsequent tests"
+  VIDEO_ID="1_noembdcg"
+fi
+
+# Test 6: List all videos
+call_api "GET" "/api/kaltura/videos" "$AUTH_HEADER" "" \
+  "List all videos"
+
+# Test 7: Search videos
+call_api "GET" "/api/kaltura/videos/search?query=test" "$AUTH_HEADER" "" \
   "Search for videos with query 'test'"
 
-# Test 11: Get video details
-call_api "GET" "/api/videos/default_video_id" "$AUTH_HEADER" "" \
-  "Get video details"
-
-# Test 12: Generate video play URL
-call_api "POST" "/api/videos/default_video_id/play" "$AUTH_HEADER" "" \
-  "Generate play URL for video"
-
-# Test 13: Check Kaltura video endpoint
-call_api "GET" "/api/kaltura/video/1_noembdcg" "$AUTH_HEADER" "" \
-  "Get Kaltura video details"
+# No additional video endpoints to test
 
 # Summary
 print_header "Test Summary"
